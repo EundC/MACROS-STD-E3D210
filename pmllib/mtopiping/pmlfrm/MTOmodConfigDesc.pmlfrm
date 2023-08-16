@@ -1,0 +1,212 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year AVEVA GmbH
+--
+-- File:            MTOmodConfigDesc.pmlfrm
+--   Type:          Form Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        Design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/01 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Form for MTO managing 
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+setup form !!MTOmodConfigDesc at xr 0.25 yr 0.25 DIALOG DOCK
+  
+  title |AVEVA Change Name / Desc|
+  
+-- Form members:
+  
+  member .tmpce                    is DBREF
+  member .config                   is DBREF
+  
+  frame .frame00 anchor all
+    path down
+    para .txt1 at xmin .frame00 ymin .frame00 text |Name:|
+    text .name at xmin .txt1 ymax .txt1 width 35 is STRING
+    para .txt2 at xmin .txt1 ymax .name text |Description:|
+    text .desc at xmin .txt1 ymax .txt2 width 35 is STRING
+  exit
+
+exit
+
+-- End of form definition for !!MTOmodConfigDesc
+
+------------------------------------------------------------------------
+--
+-- Method:      MTOmodConfigDesc
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .MTOmodConfigDesc()
+  
+  !this.name.callback = |!this.change('name')|
+  !this.desc.callback = |!this.change('desc')|
+  !this.tmpce = !!ce
+  
+  !this.cancelcall = |!this.exitform()|
+  !this.quitcall = |!this.exitform()|
+  !this.initcall = |!this.init()|
+  
+  !this.name.background = 0
+  !this.desc.background = 0
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      init
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .init()
+  
+  !this.name.background = 0
+  !this.desc.background = 0
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:   load
+--
+-- Description: load config data
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Attribute
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .load(!config is DBREF)
+  
+  !this.config = !config
+  if !config.isnamed then
+    !this.name.val = !config.name
+  else
+    !this.name.val = ||
+  endif
+
+  !this.desc.val = !config.desc
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:   change
+--
+-- Description: Change DB
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Attribute
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .change(!attr is STRING)
+  
+  if !attr eq |name| then
+    
+    !chkname = |/| + !this.name.val
+    !chkname = !chkname.replace(|//|,|/|)
+    
+    !dbref = !chkname.dbref()
+    handle any
+      -- OK
+    elsehandle none
+      if !dbref eq !this.config then
+        !this.name.background = 0
+        RETURN
+      else
+        !this.name.val = !chkname
+        !this.name.background = 3
+        !!alert.error(|Name | + !chkname + | is already used!|)
+        RETURN
+      endif
+    endhandle
+    
+    !this.name.val = !chkname
+    !this.config.name = !chkname
+    handle any
+      !this.name.background = 3
+      !mess = !!error.text
+      !!alert.error(!mess)
+    elsehandle none
+      !this.name.background = 0
+    endhandle
+    
+  else
+  
+    !this.config.desc = !this.desc.val
+    handle any
+      !this.desc.background = 3
+      !mess = !!error.text
+      !!alert.error(!mess)
+    elsehandle none
+      !this.desc.background = 0
+    endhandle
+    
+  endif
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   exitform
+--
+-- Description: exit form
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Attribute
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .exitform()
+  
+  $!this.config
+  !!MTOconfigurator.loadconfigs()
+  handle any
+  endhandle
+  
+  $!this.tmpce
+  
+--  kill !!MTOmodConfigDesc
+  
+endmethod
+-- End of method definition

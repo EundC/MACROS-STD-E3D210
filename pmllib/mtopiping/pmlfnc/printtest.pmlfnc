@@ -1,0 +1,78 @@
+define function !!printtest(!dbelements is ARRAY)
+  
+  if !dbelements.empty() then
+    RETURN
+  endif
+  
+  import 'ReportingAddin'
+  handle ANY
+  endhandle
+  
+  using namespace 'Aveva.Pdms.Reporting'
+  handle ANY
+  endhandle
+  using namespace 'Aveva.Core.Reporting'
+  handle ANY
+  endhandle
+  
+  if defined(!!report) then
+    --
+  else
+    !!report = object PMLReport()
+  endif
+  
+  -- Report Template
+  !reportFile = object file(|C:\Home\ReportTemplate.repv|)
+  
+  -- Leeres ARRAY da nichts gefiltert werden soll
+  !elements = object ARRAY()
+  
+  -- Schleife für alle "CE", für die der Report gestartet werden soll
+  do !i index !dbelements
+    
+    -- CE name
+    !name = !dbelements[$!i].name
+    
+    -- Outputfile Name ohne Endung
+    !tmp = |C:\Home\Output\| + !name
+    
+    !tmp = !tmp.trim().replace(| |,|-|)
+    !tmp = !tmp.replace(|'|,||)
+    !tmp = !tmp.replace(|*|,||)
+    !tmp = !tmp.replace(|.|,|-|)
+    !tmp = !tmp.replace(|"|,||)
+    !tmp = !tmp.replace(|{|,||)
+    !tmp = !tmp.replace(|}|,||)
+    !tmp = !tmp.replace(|[|,||)
+    !tmp = !tmp.replace(|]|,||)
+    !tmp = !tmp.replace(|/|,|-|)
+    !tmp = !tmp.replace(|\|,|-|)
+    
+    !outputfilename = !tmp
+    
+    -- Liste der Quellen nur 1 Eintrag "CE"
+    !ancestorElements = array()
+    !ancestorElements.append(!name)
+    
+    -- Lösche alte Scope definiton
+    !!report.removeScope()
+    
+    -- Setze neue Scope definiton
+    !!report.addScope(!ancestorElements, !elements)
+    
+    -- Voller Name für Report Template
+    !repfile = !reportFile.fullname()
+    
+    -- Outfile mit Endung
+    !expfile = !outputfilename + |.pdf|
+    -- Export PDF
+    !!report.exportAsPdf(!repfile, |$!expfile|)
+    
+    -- Outfile mit Endung
+    !expfile = !outputfilename + |.xlsx|
+    -- Export XLSX
+    !!report.exportAsXLSX(!repfile, |$!expfile|)
+    
+  enddo
+  
+endfunction

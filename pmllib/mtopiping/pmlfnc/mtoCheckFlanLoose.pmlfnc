@@ -1,0 +1,108 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoCheckFlanLoose.pmlfnc
+--   Type:          Function mtoCheckFlanLoose
+--   Group:         MTO Tool
+--     Keyword:     --
+--   Module:        design
+--   Replaces:      --
+--
+-- Author:          Herbert Zöchling
+-- Created:         Mon Jan 21 2013
+--
+-- Last modified by $Author:  $ on $Date:  $
+--                  $Revision: 1.0 $
+--
+-- Description:
+-- Check FLAN is connected to a TUBI or WELD
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--    
+------------------------------------------------------------------------
+
+-- Define function
+define function !!mtoCheckFlanLoose(!flan is DBREF) is BOOLEAN
+  
+  !return = false
+  FORWARD
+
+  !tmpce = !!ce
+  
+  if !flan.acttype neq |FLAN| then
+    RETURN ERROR 1 |Element have to be from TYPE FLAN!|
+  endif
+
+  if !flan.loose neq true then
+    RETURN !return
+  endif
+  
+  -- check arrive or leave tube length is not 0
+  if !flan.atle gt 0.5mm then
+    !return = true
+  else
+    if !flan.ltle gt 0.5mm then
+      !return = true
+    endif
+  endif
+
+  if !return.not() then
+    -- check WELD connected
+    !bmem = !flan.owner.member
+    !size = !bmem.size()
+    !ind = !bmem.find(!flan)
+    !prev = !ind[1] - 1
+    !next = !ind[1] + 1
+    
+    if !prev gt 0 then
+      -- check prev
+      !prevMem = !bmem[$!prev]
+      if !prevMem.acttype eq |WELD| then
+        if !prevMem.loose then
+          !lpos = !prevMem.lpos
+          !apos = !flan.apos
+          !dist = !apos.distance(!lpos)
+          if !dist lt 0.5mm then
+            -- check arrive tube length
+            if !prevMem.atle gt 0.5mm then
+              !return = true
+              RETURN !return
+            endif
+          endif
+        endif
+      endif
+    endif
+
+    if !next lt !size then
+      -- check next
+      !nextMem = !bmem[$!next]
+      if !nextMem.acttype eq |WELD| then
+        if !nextMem.loose then
+          !apos = !nextMem.apos
+          !lpos = !flan.lpos
+          !dist = !apos.distance(!lpos)
+          if !dist lt 0.5mm then
+            -- check leave tube length
+            if !nextMem.ltle gt 0.5mm then
+              !return = true
+              RETURN !return
+            endif
+          endif
+        endif
+      endif
+    endif    
+  endif
+
+  $!tmpce
+  
+  RETURN !return
+
+endfunction

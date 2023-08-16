@@ -1,0 +1,92 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2021 to Current Year  E&C GmbH
+--
+-- File:            mtoSourceUpgrade.pmlfnc
+--   Type:          Function mtocloseallpreviews
+--   Group:         MTO Tool
+--     Keyword:     --
+--   Module:        design
+--   Replaces:      --
+--
+-- Author:          Herbert Zöchling
+-- Created:         Mon Jan 21 2021
+--
+-- Last modified by $Author:  $ on $Date:  $
+--                  $Revision: 1.0 $
+--
+-- Description:
+-- Check UDAs with BADREF, "relink" if possible.
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--    
+------------------------------------------------------------------------
+
+-- Define function
+define function !!mtoSourceUpgrade(!source is DBREF)
+   
+  -- $P Upgrading Source Definiton...
+
+  !tmpce = !!ce
+   
+  var !mtosources coll all PIPE with acttype eq |:MTOSOURCE| for $!source
+  
+  do !i index !mtosources
+
+    !dbmtosrc = !mtosources[$!i].dbref()
+
+    !pipes = array()
+
+    -- set Criteria
+    do !dbele value !dbmtosrc.member
+      if !dbele.acttype eq |:MTOSRCELE| then
+        if !dbele.purpose.unset() or !dbele.purpose.trim() eq || then
+          !dbele.purpose = |CRIT|
+
+          !deslnk = !dbele.:MTODESLNK
+          if !deslnk.badref().not() then
+            if !deslnk.acttype eq |PIPE| then
+              !pipes.append(!deslnk)
+            endif
+          endif
+        endif
+      endif
+    enddo
+
+      !srcHandler = object mtoSourceHandler()
+      !srcHandler.getMTOdefiniton(!dbmtosrc.owner)
+      !srcHandler.updateSourceInDB('***migrated***')
+
+
+    $(
+      -- create elements for pipe list.
+      if !pipes.empty().not() then
+        
+        $!dbmtosrc
+        LAST MEMBER
+
+        do !j index !pipes
+          !pipe = !pipes[$!j]
+          NEW :MTOSRCELE
+          !!ce.:MTODESLNK = !pipe
+          !!ce.:MTODESLNKNAME = !pipe.name
+          !!ce.PURPOSE = 'PIPE'
+        enddo
+
+      endif
+    $)
+  enddo
+
+  $!tmpce
+  handle any
+  endhandle
+
+  
+endfunction

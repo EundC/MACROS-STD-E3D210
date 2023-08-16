@@ -1,0 +1,307 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoFormatHandler.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         15.11.2021
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2021/11/15 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO controller
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtoFormatHandler
+  
+  -- settings
+  member .file          is FILE
+  
+  member .useALLflag    is BOOLEAN
+  member .pcsLabel      is STRING
+  
+  member .bore          is FORMAT
+  member .length        is FORMAT
+  member .bdia          is FORMAT
+  member .blen          is FORMAT
+  member .all           is FORMAT
+  
+endobject
+
+-- End of object definition for mtoFormatHandler
+
+------------------------------------------------------------------------
+--
+-- Method:      mtoFormatHandler
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtoFormatHandler()
+  
+  if defined(!!mtoFormatHandler) then
+    return
+  endif
+
+  !format = object format()
+  !format.DENOMINATOR = 32
+  !format.DP = 2
+  !format.FRACTION = true
+  !format.PADFRACTIONS = true
+  !format.FTLABEL = |'|
+  !format.INCHSEPARATOR = |.|
+  !format.TRAILZEROS = true
+  !format.UNITS = |FINCH|
+  !format.ZEROS = true
+
+  !this.useALLflag = false
+  !this.pcsLabel = |Stk|
+
+  !this.bore = !format
+  !this.length = !format
+  !this.bdia = !format
+  !this.blen = !format
+  !this.all = !format
+
+  !!mtoFormatHandler = !this
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadFromFile
+--
+-- Description: load data from File
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadFromFile(!fileName is STRING)
+
+  !file = object file(!fileName)
+  handle any
+  endhandle
+
+  if !file.exists().not() then
+    var !proj PROJ CODE
+    !fullFilePathName = |%| + !proj + |DFLTS%\ini\| + !fileName
+    !file = object file(!fullFilePathName)
+    handle any
+    endhandle
+  endif
+
+  -- find zeppelin defaults?
+  if !file.exists().not() then
+    $P File: $!fileName not found in Projekt...
+    $P Try to load default file: %PMLLIB%\mtopiping\ini\mto-default-units.ini
+
+    !fullFilePathName = |%PMLLIB%\mtopiping\ini\mto-default-units.ini|
+    !file = object file(!fullFilePathName)
+    handle any
+    endhandle
+
+    if !file.exists().not() then
+      $P FAILED - Try to load default file: %PMLLIB%\mtopiping\ini\mto-default-units.ini
+    endif
+  endif
+
+  if !file.exists() then
+    !this.file = !file
+    !this.loadFromFile()
+  else
+    return error 1 'Could not load data from file!'
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadFromFile
+--
+-- Description: load data from File
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadFromFile()
+
+  if !this.file.exists() then
+    !data = !this.file.readfile()
+    do !cmd value !data
+      $!cmd
+    enddo
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      saveToFile
+--
+-- Description: add data to (new) file
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .saveToFile(!fileName is STRING) is STRING
+  
+  if !fileName.lowcase().matchwild(|*.unit|) then
+    -- OK
+    !useFileName = !fileName
+  else
+    if !fileName.lowcase().matchwild(|*.*|) then
+      !useFileName = !fileName.before(|.|) + |.unit|
+    else
+      !useFileName = !fileName + |.unit|
+    endif
+  endif
+
+  var !proj PROJ CODE
+  !fullFilePathName = |%| + !proj + |DFLTS%\ini\| + !fileName
+
+  !file = object file(!fullFilePathName)
+  !this.file = !file
+
+  !this.saveToFile()
+
+  return !useFileName
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      saveToFile
+--
+-- Description: add data to file
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .saveToFile()
+
+  !data = array()
+  !line = |!!mtoFormatHandler.useALLflag = | + !!mtoFormatHandler.useALLflag.string()
+  !data.append(!line)
+  !line = |!!mtoFormatHandler.pcsLabel = '| + !!mtoFormatHandler.pcsLabel + |'|
+  !data.append(!line)
+  
+  !member = !this.attributes()
+
+  do !name value !member
+    !gadget.delete()
+    handle any
+    endhandle
+    !gadget = !this.$!name
+    if !gadget.objecttype() eq |FORMAT| then
+      !data.append(||)
+      !format = !gadget
+      do !attribute value !format.attributes()
+        !value.delete()
+        handle any
+        endhandle
+        !value = !format.$!attribute
+        if !value.unset() then
+          skip
+        endif
+        if !value.objecttype() eq |STRING| then
+          if !value.matchwild(|*'*|) then
+            !line = |!!mtoFormatHandler.| + !name + |.| + !attribute + ' = |' + !value + '|'
+          else
+            !line = |!!mtoFormatHandler.| + !name + |.| + !attribute + | = '| + !value + |'|
+          endif
+        else
+          !line = |!!mtoFormatHandler.| + !name + |.| + !attribute + | = | + !value.string()
+        endif
+        !data.append(!line)
+      enddo
+    endif
+  enddo
+  
+  !this.file.writefile(|OVER|,!data)
+  handle any
+    !error = !!error
+    q var !error
+    return error 1 |Could not write file!|
+  endhandle
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getSettingFiles
+--
+-- Description: getSettingFiles
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getSettingFiles() is ARRAY
+
+  !fileList = array()
+
+  var !proj PROJ CODE
+  !fullFilePathName = |%| + !proj + |DFLTS%\ini\|
+  !folder = object file(!fullFilePathName)
+  !path = !folder.fullname()
+
+  do !file value !folder.files()
+    !fullname = !file.fullname()
+    if !fullname.lowcase().matchwild(|*.unit|) then
+      !name = !fullname.replace(!path,||)
+      !fileList.append(!name.substring(2))
+    endif
+  enddo
+  
+  return !fileList
+
+endmethod

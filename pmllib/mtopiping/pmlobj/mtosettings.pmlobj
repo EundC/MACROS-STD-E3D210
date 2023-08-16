@@ -1,0 +1,435 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtosettings.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.02.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO controller
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtosettings
+  
+  -- Source data
+  member .mtoc          is BOOLEAN
+  member .bolts         is BOOLEAN
+  member .bends         is BOOLEAN
+  member .ftubs         is BOOLEAN
+  member .welds         is BOOLEAN
+  member .attas         is BOOLEAN
+
+  member .keepDel       is BOOLEAN
+
+  member .siklaMode     is STRING
+
+  member .pipes         is BOOLEAN
+  member .psorthier     is BOOLEAN
+  member .summs         is BOOLEAN
+  member .sumsp         is BOOLEAN
+  
+  member .src           is ARRAY
+  member .filt          is ARRAY
+
+  member .unitFile      is STRING
+  member .OptionFile    is STRING
+
+  -- weld allowance
+  member .allowance     is REAL
+
+endobject
+
+-- End of object definition for mtosettings
+
+------------------------------------------------------------------------
+--
+-- Method:      mtosettings
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtosettings()
+  
+  !this.mtoc = true
+  !this.bolts = true
+  !this.bends = true
+  !this.ftubs = false
+  !this.welds = false
+  !this.attas = true
+  
+  !this.keepDel = false
+  
+  !this.siklaMode = |INCLUDE|
+  
+  !this.pipes = false
+  !this.psorthier = false
+  !this.summs = false
+  !this.sumsp = false
+  
+  !this.src.clear()
+  !this.filt.clear()
+
+  !this.unitFile = ||
+  !this.OptionFile = ||
+
+  !this.allowance = 150mm
+
+  -- init format hanlder
+  !tmp = object mtoFormatHandler()
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      get
+--
+-- Description: get data from DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .get(!elem is STRING)
+  
+  !dbele = !elem.dbref()
+  handle any
+    RETURN ERROR 1
+  endhandle
+  !this.get(!dbele)
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      get
+--
+-- Description: get data from DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .get(!elem is DBREF)
+  
+  !this.src.clear()
+  !this.filt.clear()
+  
+  if !elem.acttype neq |:MTOVERS| then
+    RETURN ERROR 1 'Element have to be :MTOVERS!'
+  endif
+  
+  !mtogrp = !elem.owner
+  !this.mtoc  = !mtogrp.:MTO-USEMTOFLAGS
+  if !this.mtoc.unset() then
+    !this.mtoc = false
+  endif
+  !this.bolts = !mtogrp.:MTO-INCLUDEBOLTS
+  if !this.bolts.unset() then
+    !this.bolts = false
+  endif
+  !this.bends = !mtogrp.:MTO-ADDBENDS
+  if !this.bends.unset() then
+    !this.bends = false
+  endif
+  !this.welds = !mtogrp.:MTO-ADDWELD
+  if !this.welds.unset() then
+    !this.welds = false
+  endif
+  !this.attas = !mtogrp.:MTO-ADDATTA
+  if !this.attas.unset() then
+    !this.attas = false
+  endif
+  !this.ftubs = !mtogrp.:MTO-FTUBUIDS
+  if !this.ftubs.unset() then
+    !this.ftubs = false
+  endif
+  !this.pipes = !mtogrp.:MTO-BY-PIPE
+  if !this.pipes.unset() then
+    !this.pipes = false
+  endif
+  !this.psorthier = !mtogrp.:MTO-PIPE-SORTHIER
+  if !this.psorthier.unset() then
+    !this.psorthier = false
+  endif
+  !this.summs = !mtogrp.:MTO-SUMM
+  if !this.summs.unset() then
+    !this.summs = false
+  endif
+  !this.sumsp = !mtogrp.:MTO-BY-SPEC
+  if !this.sumsp.unset() then
+    !this.sumsp = false
+  endif
+
+  !this.keepDel = !mtogrp.:MTO-KEEP-DEL
+  handle any
+    !this.keepDel = false
+  endhandle
+  if !this.keepDel.unset() then
+    !this.keepDel = false
+  endif
+
+  !this.siklaMode = !mtogrp.:MTO-SIKLA-MODE
+  handle any
+    !this.siklaMode = |INCLUDE|
+  endhandle
+  if !this.siklaMode.unset() then
+    !this.siklaMode = |INCLUDE|
+  endif
+
+  !this.unitFile = !mtogrp.:MTO-UNIT-FILE
+  handle any
+    !this.unitFile = ||
+  elsehandle none
+    if !this.unitFile.unset() or !this.unitFile.trim() eq || then
+      !this.unitFile = ||
+    endif
+  endhandle
+
+  !this.OptionFile = !mtogrp.:MTO-OPTION-FILE
+  handle any
+    !this.OptionFile = ||
+  elsehandle none
+    if !this.OptionFile.unset() or !this.OptionFile.trim() eq || then
+      !this.OptionFile = ||
+    endif
+  endhandle
+  
+  !error = array()
+  
+  !source = =0/0
+  
+  -- set source and filter
+  do !mem value !mtogrp.member
+    if !mem.acttype eq |:MTOSOURCE| then
+      !source = !mem
+    endif
+  enddo
+
+  if !source.badref() then
+    RETURN ERROR 1 'Source definition for MTO not found!'
+  endif
+  
+  do !mem value !source.member
+    if !mem.acttype eq |:MTOSRCELE| then
+      if !mem.:MTODESLNK.badref().not() then
+        !this.src.append(!mem.:MTODESLNK)
+      endif
+    elseif !mem.acttype eq |:MTOSRCFLT| then
+      !crit = array()
+      if !mem.:MTO-SRCFLT-ATTR.unset() or !mem.:MTO-SRCFLT-ATTR.empty() or !mem.:MTO-SRCFLT-ATTR.replace(| |,||) eq || then
+        -- ignore
+        !errmess = !mem.:MTO-SRCFLT-ELEM + | | + !mem.:MTO-SRCFLT-ATTR + | | + !mem.:MTO-SRCFLT-OP + | | + !mem.:MTO-SRCFLT-VAL
+        !error.append(!errmess)
+        SKIP
+      endif
+      if !mem.:MTO-SRCFLT-VAL.unset() or !mem.:MTO-SRCFLT-VAL.empty() or !mem.:MTO-SRCFLT-VAL.replace(| |,||) eq || then
+        -- ignore
+        !errmess = !mem.:MTO-SRCFLT-ELEM + | | + !mem.:MTO-SRCFLT-ATTR + | | + !mem.:MTO-SRCFLT-OP + | | + !mem.:MTO-SRCFLT-VAL
+        !error.append(!errmess)
+        SKIP
+      endif
+      if !mem.:MTO-SRCFLT-OP.unset() or !mem.:MTO-SRCFLT-OP.empty() or !mem.:MTO-SRCFLT-OP.replace(| |,||) eq || then
+        -- ignore
+        !errmess = !mem.:MTO-SRCFLT-ELEM + | | + !mem.:MTO-SRCFLT-ATTR + | | + !mem.:MTO-SRCFLT-OP + | | + !mem.:MTO-SRCFLT-VAL
+        !error.append(!errmess)
+        SKIP
+      endif
+      
+      if !mem.:MTO-SRCFLT-ELEM.unset() or !mem.:MTO-SRCFLT-ELEM.empty() or !mem.:MTO-SRCFLT-ELEM.replace(| |,||) eq || then
+        !expr = !mem.:MTO-SRCFLT-ATTR
+      else
+        !expr = !mem.:MTO-SRCFLT-ATTR + | OF | + !mem.:MTO-SRCFLT-ELEM
+      endif
+      
+      !crit[1] = !expr
+      !crit[2] = !mem.:MTO-SRCFLT-OP
+      !crit[3] = !mem.:MTO-SRCFLT-VAL
+      
+      !this.filt.append(!crit)
+      
+    endif
+  enddo
+
+  -- init format hanlder
+  if !this.unitFile neq || then
+    !!mtoFormatHandler.LoadFromFile(!this.unitFile)
+  endif
+
+  -- get allowance from Optinfile
+  !allow = 150mm
+  !olines = !this.OptionFile.readfile()
+  handle any
+  elsehandle none
+    do !i index !olines
+      !line = !olines[$!i].trim()
+      if !line.matchwild(|LOOSE*|) then
+        !odata = !line.split()
+        !value = !odata[2].real()
+        handle any
+          !mess = !!error.text
+          $P Error getting Allowance from Optionfile! - $!mess
+        elsehandle none
+          !allow = !value
+        endhandle
+        break
+      endif
+    enddo
+  endhandle
+
+  $P Weld allowance is set to: $!allow
+  !this.allowance = !allow
+
+  !error.sortunique()
+  if !error.empty().not() then
+    !!alert.warning(|Some filter criteria definiton have been ignored!!|)
+    !log = object file(|%PDMSUSER%\error-mto-filter-def.txt|)
+    !log.writefile(|OVER|,!error)
+    SYSCOM 'start %PDMSUSER%\error-mto-filter-def.txt&'
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getpipes
+--
+-- Description: get PIPEs from DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--    RETURN      Array of PIPEs
+------------------------------------------------------------------------
+
+define method .getpipes() is ARRAY
+
+  -- depricated!! --> use mtoSourceHandler
+  return error 1 'Method ".getpipes()" is not valid anymore'
+  
+
+  
+  !pipes = array()
+
+  do !src value !this.src
+    if !src.type eq |WORL| then
+      var !pipes coll all PIPE
+    else
+      var !p coll all PIPE FOR $!src
+      !pipes.appendarray(!p)
+    endif
+  enddo
+  
+  !pipeout = array()
+  !error = array()
+
+  -- check pipes are unique!!
+  !pipes.unique()
+  
+  -- process filter now per pipe
+  do !i index !pipes
+    !pipe = !pipes[$!i].dbref()
+    !valid = true
+    !val = ||
+    do !j index !this.filt
+      !val.delete()
+      handle any
+      endhandle
+      !exprstr = !this.filt[$!j][1]
+      !oper = !this.filt[$!j][2]
+      !expr = object expression(!exprstr)
+      !val = !expr.evaluate(!pipe)
+      if !val.unset().not() then
+        if !val.objecttype() eq |STRING| then
+          if !oper.upcase().matchwild(|*MATCH*|) then
+            !chk = !val.matchwild(!this.filt[$!j][3])
+          else
+            !chk = !val.$!oper(!this.filt[$!j][3])
+          endif
+        elseif !val.objecttype() eq |REAL| then
+          if !oper.upcase().matchwild(|*MATCH*|) then
+            -- not possible
+            !error.append(!this.filt[$!j][1] + | | + !this.filt[$!j][2] + | | + !this.filt[$!j][3])
+            SKIP
+          else
+            !real = !this.filt[$!j][3].real()
+            handle any
+              -- not possible
+              !error.append(!this.filt[$!j][1] + | | + !this.filt[$!j][2] + | | + !this.filt[$!j][3])
+              SKIP
+            endhandle
+            !chk = !val.$!oper(!real)
+          endif
+        elseif !val.objecttype() eq |DBREF| then
+          -- ??
+          !name = !val.name
+          if !oper.upcase().matchwild(|*MATCH*|) then
+            !chk = !name.matchwild(!this.filt[$!j][3])
+          else
+            !chk = !name.$!oper(!this.filt[$!j][3])
+          endif
+        else
+          -- ignore
+          SKIP
+        endif
+        
+        if !chk.not() then
+          !valid = false
+          BREAK
+        endif
+      else
+        !valid = false
+        BREAK
+      endif
+    enddo
+    if !valid then
+      !pipeout.append(!pipe)
+    endif
+  enddo
+
+  !error.sortunique()
+  if !error.empty().not() then
+    !!alert.warning(|Some filter values have been ignored!!|)
+    !log = object file(|%PDMSUSER%\error-mto-filter-values.txt|)
+    !log.writefile(|OVER|,!error)
+    SYSCOM 'start %PDMSUSER%\error-mto-filter-values.txt&'
+  endif
+  
+  RETURN !pipeout
+  
+endmethod

@@ -1,0 +1,87 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtonewmtoworld.pmlfnc
+--   Type:          Function mtonewmtoworld
+--   Group:         MTO Tool
+--     Keyword:     --
+--   Module:        design
+--   Replaces:      --
+--
+-- Author:          Herbert Zöchling
+-- Created:         Mon Jan 21 2013
+--
+-- Last modified by $Author:  $ on $Date:  $
+--                  $Revision: 1.0 $
+--
+-- Description:
+-- Check MTO Definiton, open Modify form
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--    
+------------------------------------------------------------------------
+
+-- Define function
+define function !!mtonewmtoworld()
+  
+  !tmpce = !!ce
+  
+  if !!ce.dbwrite neq TRUE then
+    !!alert.error(|You have NO WRITE ACCESS to CE!|)
+    RETURN
+  endif
+  
+  !dbname = !!ce.dbname
+  !dbfile = !!ce.dbfile
+  
+  !quest = |Do you really want to create a :MTOWLD in DB: | + !dbname + | // | + !dbfile + | ?|
+  !ans = !!alert.confirm(!quest)
+  
+  if !ans neq |YES| then
+    RETURN
+  endif
+  
+  !name = | |
+  do !i
+    !newname = !!alert.input(|Enter Name:|,!name)
+    if !newname.replace(| |,||) eq || then
+      !name = ||
+      BREAK
+    else
+      !chkname = |/| + !newname
+      !chkname = !chkname.replace(|//|,|/|)
+      !name = !chkname
+      !dbelem = !chkname.dbref()
+      handle any
+        -- OK
+        BREAK
+      elsehandle NONE
+        !!alert.error(|Name | + !chkname + | is already used!|)
+        SKIP
+      endhandle
+    endif
+  enddo
+  
+  NEW :MTOWLD
+  
+  if !name neq || then
+    !!ce.name = !name
+  endif
+  
+  if defined(!!MTOmanager) then
+    !!MTOmanager.loadmtowlds()
+  endif
+  
+  show !!MTOworldData
+  
+  $!tmpce
+  
+endfunction

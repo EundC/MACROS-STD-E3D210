@@ -1,0 +1,433 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<UserInterfaceCustomization xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="www.aveva.com">
+  <Version>1.0</Version>
+  <FormsMetaData />
+  <Tools>
+    <ButtonTool Name="Zeppelin.SAPMTO">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!SAPMto</Macro>
+        <Key>Macro:98290206-5960-41eb-9eb4-235f1ad6a2ae</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAAK/INwWK6QAAAAd0SU1FB84GBQgyLfkUiUoAAAAVdEVYdFNvZnR3YXJlAFhQYWludCAyLjQuOVAOvXoAAABaSURBVDhPYzhw4AADCAPBf2IxTA9YH7IB/wkAkAUwy+D60A3A5QqQ2chyOA0g5AqYQWS5AGY4zCskhwFRBhCKCYJeoFkYwFw26gIGcBjTNh1QFI2EEhG2zAQANLlkzRPnYYcAAAAASUVORK5CYII=</Image>
+      <Caption>SAP and UNIPPS MTO</Caption>
+      <HelpContext />
+      <Tooltip />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Square2Round">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!square2round</Macro>
+        <Key>Macro:dade60f9-33be-4de2-8ac4-a8ca803702a1</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsIAAA7CARUoSoAAAADwSURBVChTjZC/asMwEMb1CHmEPIIfwY+gMaPGjBoNpaCxo7d2CdFoyBKytEMHQ4c6ZKjAFDIqZMgQAoIEkklfpasxNWn+ID4O7u53953YaPYNz+5/jCuDqj6cQUo7TEt3lmc8KyGeLD6+9p1imhmI3OJzeerk2ePzgoCH8YYiV0Ehitwhf/OQL91N5L7PNThNdK1SGSEPVUTIYrX1tKk9NxElkqEBxcH0N0qDaK1eHeGKPunf/4mFZKCRyhKv8x28zUlW964AwebkfQ2/VCRXyeuAt7ptvg2E1WSjme7NrQ0NEG24SrS6fEMAXKPY9Fc/RWlpdFi8FHUAAAAASUVORK5CYII=</Image>
+      <Caption>Square 2 round</Caption>
+      <HelpContext />
+      <Tooltip />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.3DText">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>  $M/%PDMSUI%/des/Bonus/texa/MLETTER</Macro>
+        <Key>Macro:15e8f58b-52bb-49cf-b9d7-42e9b5dff47f</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAAK/INwWK6QAAAAd0SU1FB84HFg4mCOf/JysAAAAVdEVYdFNvZnR3YXJlAFhQYWludCAyLjQuOVAOvXoAAADJSURBVFhH7ZZLDoAgDER7/1NxMxSTmlI7rQSFTRfEhPB5MwxFKqXQzrZ18yY8AdKBdCAdCB0gotqarJbcZ32tqorGh4VITtQLe2AIlvvlXNeBWQAL8lItHIUAPGhUqaXee+xMgM6igQyMbg4z0FnkAOgzjeaZAUXh0sn1NuNznQbQ121kYZ0VFEAYQi+xkbKoVljX7+47q0zlhlR4hSdSio7SBGggq/8PW519OPBG8RdjrjxIgO0OrLY/fIxWAIXP8d8QCZAOpAMHh2VAAcdYK+YAAAAASUVORK5CYII=</Image>
+      <Caption>3D Text</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.WTreppe">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>call !!CGWTREPPE()</Macro>
+        <Key>Macro:d861cc7b-8f4e-4c2a-919c-efdf3afb99c2</Key>
+        <Arguments />
+      </Command>
+      <Image>Qk2WIgAAAAAAADYAAAAoAAAANQAAADcAAAABABgAAAAAAAAAAADEDgAAxA4AAAAAAAAAAAAA57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WS57WSAOi4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lei4lQDouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJXouJUA6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiV6LiVAOm7mem7mQAAAAAAAAAAAAAAAAAAAAAAAOm7mem7mem7mQCAAACAAACAAOm7mem7mem7mQAAAAAAAAAAAOm7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mem7mQAAAAAAAAAAAOm7mem7mem7mQDpu5npu5kAAAAAAAAAAAAAAAAAAAAAAADpu5npu5npu5kAgAAAgAAAgADpu5npu5npu5kAAAAAAAAAAADpu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5npu5kAAAAAAAAAAADpu5npu5npu5kA6buZ6buZAAAAAAAAAAAAAAAAAAAAAAAA6buZ6buZ6buZAIAAAIAAAIAA6buZ6buZ6buZAAAAAAAAAAAA6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZ6buZAAAAAAAAAAAA6buZ6buZ6buZAOq9nOq9nAAAAAAAAAAAAOq9nOq9nOq9nOq9nOq9nOq9nACAAACAAACAAOq9nOq9nOq9nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nOq9nAAAAAAAAAAAAOq9nOq9nOq9nADqvZzqvZwAAAAAAAAAAADqvZzqvZzqvZzqvZzqvZzqvZwAgAAAgAAAgADqvZzqvZzqvZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZzqvZwAAAAAAAAAAADqvZzqvZzqvZwA6r2c6r2cAAAAAAAAAAAA6r2c6r2c6r2c6r2c6r2c6r2cAIAAAIAAAIAA6r2c6r2c6r2cAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2c6r2cAAAAAAAAAAAA6r2c6r2c6r2cAOy/n+y/nwAAAAAAAAAAAOy/n+y/n+y/nwCAAACAAACAAACAAACAAACAAACAAACAAACAAOy/n+y/n+y/n+y/n+y/n+y/n+y/n+y/n+y/nwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOy/n+y/n+y/n+y/n+y/n+y/n+y/n+y/n+y/nwAAAAAAAAAAAOy/n+y/n+y/nwDsv5/sv58AAAAAAAAAAADsv5/sv5/sv58AgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgADsv5/sv5/sv5/sv5/sv5/sv5/sv5/sv5/sv58AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADsv5/sv5/sv5/sv5/sv5/sv5/sv5/sv5/sv58AAAAAAAAAAADsv5/sv5/sv58A7L+f7L+fAAAAAAAAAAAA7L+f7L+f7L+fAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAA7L+f7L+f7L+f7L+f7L+f7L+f7L+f7L+f7L+fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA7L+f7L+f7L+f7L+f7L+f7L+f7L+f7L+f7L+fAAAAAAAAAAAA7L+f7L+f7L+fAO3Co+3Co+3Co+3Co+3Co+3Co+3Co+3CowCAAACAAACAAACAAACAAACAAACAAACAAACAAO3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3Co+3CowAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAO3Co+3Co+3CowDtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqMAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgADtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqPtwqMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADtwqPtwqPtwqMA7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKjAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAA7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKj7cKjAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA7cKj7cKj7cKjAO7Epu7Epu7Epu7Epu7EpgCAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAO7Epu7Epu7Epu7Epu7Epu7EpgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAO7Epu7Epu7Epu7Epu7Epu7Epu7Epu7Epu7EpgAAAAAAAAAAAO7Epu7Epu7EpgDuxKbuxKbuxKbuxKbuxKYAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgADuxKbuxKbuxKbuxKbuxKbuxKYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADuxKbuxKbuxKbuxKbuxKbuxKbuxKbuxKbuxKYAAAAAAAAAAADuxKbuxKbuxKYA7sSm7sSm7sSm7sSm7sSmAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAA7sSm7sSm7sSm7sSm7sSm7sSmAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA7sSm7sSm7sSm7sSm7sSm7sSm7sSm7sSm7sSmAAAAAAAAAAAA7sSm7sSm7sSmAO7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7GqgCAAACAAACAAO7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7GqgAAAAAAAAAAAAAAAAAAAAAAAO7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7Gqu7GqgAAAAAAAAAAAO7Gqu7Gqu7GqgDuxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqoAgAAAgAAAgADuxqruxqruxqruxqruxqruxqruxqruxqruxqoAAAAAAAAAAAAAAAAAAAAAAADuxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqruxqoAAAAAAAAAAADuxqruxqruxqoA7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saqAIAAAIAAAIAA7saq7saq7saq7saq7saq7saq7saq7saq7saqAAAAAAAAAAAAAAAAAAAAAAAA7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saq7saqAAAAAAAAAAAA7saq7saq7saqAO/Jre/JrQAAAAAAAAAAAAAAAAAAAAAAAO/Jre/Jre/JrQCAAACAAACAAO/Jre/Jre/JrQAAAAAAAAAAAO/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/Jre/JrQAAAAAAAAAAAO/Jre/Jre/JrQDvya3vya0AAAAAAAAAAAAAAAAAAAAAAADvya3vya3vya0AgAAAgAAAgADvya3vya3vya0AAAAAAAAAAADvya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya3vya0AAAAAAAAAAADvya3vya3vya0A78mt78mtAAAAAAAAAAAAAAAAAAAAAAAA78mt78mt78mtAIAAAIAAAIAA78mt78mt78mtAAAAAAAAAAAA78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mt78mtAAAAAAAAAAAA78mt78mt78mtAPHLsPHLsAAAAAAAAAAAAPHLsPHLsPHLsPHLsPHLsPHLsACAAACAAACAAPHLsPHLsPHLsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsPHLsAAAAAAAAAAAAPHLsPHLsPHLsADxy7Dxy7AAAAAAAAAAAADxy7Dxy7Dxy7Dxy7Dxy7Dxy7AAgAAAgAAAgADxy7Dxy7Dxy7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7Dxy7AAAAAAAAAAAADxy7Dxy7Dxy7AA8cuw8cuwAAAAAAAAAAAA8cuw8cuw8cuw8cuw8cuw8cuwAIAAAIAAAIAA8cuw8cuw8cuwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuw8cuwAAAAAAAAAAAA8cuw8cuw8cuwAPLOs/LOswAAAAAAAAAAAPLOs/LOs/LOs/LOs/LOs/LOswCAAACAAACAAPLOs/LOs/LOs/LOs/LOs/LOs/LOs/LOs/LOs/LOs/LOs/LOswAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPLOs/LOs/LOs/LOs/LOs/LOs/LOs/LOs/LOswAAAAAAAAAAAPLOs/LOs/LOswDyzrPyzrMAAAAAAAAAAADyzrPyzrPyzrPyzrPyzrPyzrMAgAAAgAAAgADyzrPyzrPyzrPyzrPyzrPyzrPyzrPyzrPyzrPyzrPyzrPyzrMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADyzrPyzrPyzrPyzrPyzrPyzrPyzrPyzrPyzrMAAAAAAAAAAADyzrPyzrPyzrMA8s6z8s6zAAAAAAAAAAAA8s6z8s6z8s6z8s6z8s6z8s6zAIAAAIAAAIAA8s6z8s6z8s6z8s6z8s6z8s6z8s6z8s6z8s6z8s6z8s6z8s6zAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8s6z8s6z8s6z8s6z8s6z8s6z8s6z8s6z8s6zAAAAAAAAAAAA8s6z8s6z8s6zAPPQt/PQtwAAAAAAAAAAAPPQt/PQt/PQt/PQt/PQt/PQtwCAAACAAACAAPPQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQt/PQtwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPPQt/PQt/PQtwDz0Lfz0LcAAAAAAAAAAADz0Lfz0Lfz0Lfz0Lfz0Lfz0LcAgAAAgAAAgADz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0Lfz0LcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADz0Lfz0Lfz0LcA89C389C3AAAAAAAAAAAA89C389C389C389C389C389C3AIAAAIAAAIAA89C389C389C389C389C389C389C389C389C389C389C389C389C389C389C389C389C389C389C389C389C3AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA89C389C389C3APTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSugCAAACAAACAAPTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSugAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSuvTSugAAAAAAAAAAAPTSuvTSuvTSugD00rr00rr00rr00rr00rr00rr00rr00rr00rr00rr00roAgAAAgAAAgAD00rr00rr00rr00rr00rr00rr00rr00rr00rr00rr00rr00roAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD00rr00rr00rr00rr00rr00rr00rr00rr00roAAAAAAAAAAAD00rr00rr00roA9NK69NK69NK69NK69NK69NK69NK69NK69NK69NK69NK6AIAAAIAAAIAA9NK69NK69NK69NK69NK69NK69NK69NK69NK69NK69NK69NK6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9NK69NK69NK69NK69NK69NK69NK69NK69NK6AAAAAAAAAAAA9NK69NK69NK6APXVvvXVvvXVvvXVvvXVvgCAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAACAAPXVvvXVvvXVvgAAAAAAAAAAAAAAAAAAAAAAAPXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvvXVvgAAAAAAAAAAAPXVvvXVvvXVvgD11b711b711b711b711b4AgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAD11b711b711b4AAAAAAAAAAAAAAAAAAAAAAAD11b711b711b711b711b711b711b711b711b711b711b711b711b711b711b711b711b711b4AAAAAAAAAAAD11b711b711b4A9dW+9dW+9dW+9dW+9dW+AIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAA9dW+9dW+9dW+AAAAAAAAAAAAAAAAAAAAAAAA9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+9dW+AAAAAAAAAAAA9dW+9dW+9dW+APbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwQCAAACAAACAAACAAACAAACAAACAAACAAACAAPbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwfbXwQAAAAAAAAAAAPbXwfbXwfbXwQD218H218H218H218H218H218H218H218EAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAD218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218H218EAAAAAAAAAAAD218H218H218EA9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfBAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAA9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfB9tfBAAAAAAAAAAAA9tfB9tfB9tfBAPfaxPfaxAAAAAAAAAAAAPfaxPfaxPfaxACAAACAAACAAACAAACAAACAAACAAACAAACAAPfaxPfaxPfaxAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxPfaxAAAAAAAAAAAAPfaxPfaxPfaxAD32sT32sQAAAAAAAAAAAD32sT32sT32sQAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAAAgAD32sT32sT32sQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD32sT32sT32sT32sT32sT32sT32sT32sT32sT32sT32sT32sT32sT32sT32sT32sT32sT32sQAAAAAAAAAAAD32sT32sT32sQA99rE99rEAAAAAAAAAAAA99rE99rE99rEAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAAAIAA99rE99rE99rEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA99rE99rE99rE99rE99rE99rE99rE99rE99rE99rE99rE99rE99rE99rE99rE99rE99rE99rEAAAAAAAAAAAA99rE99rE99rEAPjdyPjdyAAAAAAAAAAAAPjdyPjdyPjdyPjdyPjdyPjdyACAAACAAACAAPjdyPjdyPjdyPjdyPjdyPjdyPjdyPjdyPjdyPjdyPjdyPjdyAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPjdyPjdyPjdyPjdyPjdyPjdyPjdyPjdyPjdyAAAAAAAAAAAAPjdyPjdyPjdyAD43cj43cgAAAAAAAAAAAD43cj43cj43cj43cj43cj43cgAgAAAgAAAgAD43cj43cj43cj43cj43cj43cj43cj43cj43cj43cj43cj43cgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD43cj43cj43cj43cj43cj43cj43cj43cj43cgAAAAAAAAAAAD43cj43cj43cgA+N3I+N3IAAAAAAAAAAAA+N3I+N3I+N3I+N3I+N3I+N3IAIAAAIAAAIAA+N3I+N3I+N3I+N3I+N3I+N3I+N3I+N3I+N3I+N3I+N3I+N3IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+N3I+N3I+N3I+N3I+N3I+N3I+N3I+N3I+N3IAAAAAAAAAAAA+N3I+N3I+N3IAPnfy/nfywAAAAAAAAAAAPnfy/nfy/nfy/nfy/nfy/nfywCAAACAAACAAPnfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfy/nfywAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPnfy/nfy/nfywD538v538sAAAAAAAAAAAD538v538v538v538v538v538sAgAAAgAAAgAD538v538v538v538v538v538v538v538v538v538v538v538v538v538v538v538v538v538v538v538v538sAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD538v538v538sA+d/L+d/LAAAAAAAAAAAA+d/L+d/L+d/L+d/L+d/L+d/LAIAAAIAAAIAA+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/L+d/LAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+d/L+d/L+d/LAPriz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/riz/rizwD64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s/64s8A+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLP+uLPAA==</Image>
+      <Caption>Wendeltreppe</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Avasorthierachy">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>  show !!avasorthierarchy</Macro>
+        <Key>Macro:1fcc12b4-9300-49b6-9a43-3137fb632990</Key>
+        <Arguments />
+      </Command>
+      <Image>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</Image>
+      <Caption>Sort hierachy</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>Design General</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button2">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!pipemanag</Macro>
+        <Key>Macro:99bb3eff-fcb9-4032-a00a-45424307f32b</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAACkAAAAVCAYAAADb2McgAAAABGdBTUEAAK/INwWK6QAAAAlwSFlzAAAOwwAADsMBx2+oZAAAAAd0SU1FB84HFg8WEV0Q0y8AAAAVdEVYdFNvZnR3YXJlAFhQYWludCAyLjQuOVAOvXoAAADJSURBVEhL7VbtCsQgDOv7P5Vv5uGPjFzXD93k6IGCoFa7NMncpLXWq3fRAEWkoyM25jzmuLXfyznWrdyc3yLMBIlkHkiOZw+w9uKMLt5TdBuTkWU0KJ5PKWFJE61p5laY1Mq8YnIVpPZZVngkt1X0Te6Kb/oFkr1RYcxkfYHsSRvgvRbFVs/cfM9m/huQntSjAGYL+1AYYrNW4Xx8ButH7swyHPd8nHryyK1ofsxkJFeZK+jIvUPu2TvuF/vMe7Lij8X1NawMDtg+sRt2BmjVglMAAAAASUVORK5CYII=</Image>
+      <Caption>Pipe Manager</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button3">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!mtomanager</Macro>
+        <Key>Macro:a9efc510-84a1-457a-8399-c398cace37d2</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAABtSURBVDhPzY0BCoAwDAP9/6NXzeBGVjpliKBwXQjteUTEK8pSXJ/GLX3PjxwttNaWfCOgJLOYmQSUjgtWjD0NoCRXh1AKHAR6M1uCFaWAklwdwhAoZFzgPUwCDaAk+x8zpcD5h+CJvudH+8RxAgA3s5n26/g9AAAAAElFTkSuQmCC</Image>
+      <Caption>MTO Manager</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button4">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!MTOconfigurator</Macro>
+        <Key>Macro:812cc9f3-dd94-413f-8470-5b68dc2d7a53</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_CUSTOMISE</ImageResourceId>
+      <Caption>MTO Config</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button5">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>!!mtonewmtoworld()</Macro>
+        <Key>Macro:e0a404cf-b7a3-4bd1-9953-9be99d62e8d9</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>StandardIcons:ID_WEB</ImageResourceId>
+      <Caption>New :MTOWLD</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button6">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>!!mtocloseallpreviews()</Macro>
+        <Key>Macro:b3d58eed-e319-45bb-8ccb-44c8a0cc3fdf</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_DELETE</ImageResourceId>
+      <Caption>Close Previews</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button7">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>!!mtomodifyworld()</Macro>
+        <Key>Macro:b98feb68-7c18-4075-9e6a-38b0e7632d86</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_RENAME_ALL</ImageResourceId>
+      <Caption>Mod :MTOWLD</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <PopupGalleryTool Name="PinkCAD.PopupGallery1">
+      <Command>
+        <Type>Instance</Type>
+        <Key>AVEVA.Interaction.PrimitiveGallery</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_CREATE_PRIMITIVE_</ImageResourceId>
+      <Caption>Primitives</Caption>
+      <HelpContext>AvevaSharedIcons:ID_CREATE_PRIMITIVE_</HelpContext>
+      <Tooltip>Select a Primitive</Tooltip>
+      <TooltipFormattedText>&lt;p&gt;Select a Primitive&lt;/p&gt;</TooltipFormattedText>
+      <TooltipTitle>Select a Primitive</TooltipTitle>
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+      <Tools />
+      <Items Key="BOX">
+        <Group>AvevaSharedIcons:ID_BOX</Group>
+        <TextPlacement>Default</TextPlacement>
+        <UseLargeImage>true</UseLargeImage>
+        <Image />
+        <Tooltip>Create a Box Primitive</Tooltip>
+      </Items>
+      <Items Key="Item1">
+        <TextPlacement>Default</TextPlacement>
+        <Image />
+      </Items>
+      <Items Key="Item2">
+        <TextPlacement>Default</TextPlacement>
+        <Image />
+      </Items>
+      <Items Key="Item3">
+        <TextPlacement>Default</TextPlacement>
+        <Image />
+      </Items>
+      <Items Key="Item4">
+        <TextPlacement>Default</TextPlacement>
+        <Image />
+      </Items>
+      <Items Key="Item5">
+        <TextPlacement>Default</TextPlacement>
+        <Image />
+      </Items>
+      <Items Key="Item6">
+        <TextPlacement>Default</TextPlacement>
+        <Image />
+      </Items>
+      <Items Key="Item7">
+        <TextPlacement>Default</TextPlacement>
+        <Image />
+      </Items>
+      <Items Key="Item8">
+        <TextPlacement>Default</TextPlacement>
+        <Image />
+      </Items>
+      <TextPlacement>RightOfImage</TextPlacement>
+      <MinPreviewColumns>3</MinPreviewColumns>
+      <MaxPreviewColumns>4</MaxPreviewColumns>
+      <MinDropDownColumns>11</MinDropDownColumns>
+      <ShowPreviewInRibbon>true</ShowPreviewInRibbon>
+    </PopupGalleryTool>
+    <ButtonTool Name="Zeppelin.SectionEXT">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>  show !!CDSCTNEXT</Macro>
+        <Key>Macro:e6f91e13-05b6-4844-9e3d-0a5adcbd0534</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAABGdBTUEAAK/INwWK6QAAAAd0SU1FB84HFwk1GshaZhEAAAAVdEVYdFNvZnR3YXJlAFhQYWludCAyLjQuOVAOvXoAAACiSURBVEhL3ZFRCsAgDEO9/6m82WZh6eJIK0L9mfAwDbUpW+u9H0WalUizEmlWIs1KXtHatcL6hvD7q1EzLq7FQUBGGsCbRljfENPWrFEzLp5Fw4OAjJ8H2IAV1jeE31+NmnHxLBoeBGSkAbxphPUNMW3NGjUzFSeQZiXSjMBn2kGaEfgXO0HSZHioQr1hpBmxMxhIM2JnMJBmJdKsRJp19HYDr14GuUib7XAAAAAASUVORK5CYII=</Image>
+      <Caption>Extend Section</Caption>
+      <HelpContext />
+      <Tooltip>Only works in STRUCTURES Module</Tooltip>
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>Sections</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button1">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!genPrimitives</Macro>
+        <Key>Macro:1b8a7c2b-a644-4d28-9ed9-a9a4a1568ac0</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_CREATE_PRIMITIVE_</ImageResourceId>
+      <Caption>Primitives</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button8">
+      <Command>
+        <Type>Instance</Type>
+        <Key>AVEVA.DesignGeneral.CommandPrimitivesModify</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_MODIFY_PRIMITIVE</ImageResourceId>
+      <Caption>Primitives</Caption>
+      <HelpContext />
+      <Tooltip>Modify Primitives</Tooltip>
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.CreateFit">
+      <Command>
+        <Type>Instance</Type>
+        <Key>AVEVA.Steelwork.CommandCreateSingleFitting</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_CREATE_FITTING</ImageResourceId>
+      <Caption>Create Single Fit</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>Sections</Category>
+    </ButtonTool>
+    <ButtonTool Name="ClassicModelEditor">
+      <Command>
+        <Type>Macro</Type>
+        <Macro> call !!classicModeleditor()</Macro>
+        <Key>Macro:947ce5b2-f7cb-49e9-b0c8-c7921af58194</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAACvAAAArwAUKsNJgAAAAHdElNRQfTAR0OKxCmNKLUAAABo0lEQVRIS9WVoXfCMBCHK5GVWCQSiUUiK7HIysraykpkbSV/Qm1l5SQWWTl5y5fsYC1hyXiY5b1fQyh3X+6SO5K+7x9UFB+SJPIehQCLhUiaunliGKsQYLMROR5FVquZYax8gLK8A3De9yK73cwwVj6ARkBa6lrkenWgl9I0dz4MneS5A7DrrhP5/BRpW5euBwch4fRotrfdbuVwyOR8bgzgag8WpzqAnE4eByEBWK/XZpHIcplK09RSlqMFVJVLD+NyESkKj4OQAGxM7A6wtICqGu1LIHoGee7WE+MY+QB17QAIxwD2+5lhrEIA0vK/AWX5HMCZsAFul3Hhr5OYCMbRHTaQn+J8uF1aJxQjtUNbucFCAIwYQIhkLh1AWNNWsLnduBCA3WBAJKSLGbF7vcIMKp41v52kywfQOghJi5H0kJroM4gFICC/FuAc0LaNDMNoIYh0PRPvaSv0LhokXZhWz6yaAFKzldwkFwiRxIoGiR+f7EMBCiGSeKW2C9+dduaz6hug3fRV0ervgKnsI8syAUIkfxV2/J/MHau8X75PffIF9cEAPV2XDucAAAAASUVORK5CYII=</Image>
+      <Caption>"Classic" ModelEditor</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.MitreEnds">
+      <Command>
+        <Type>Instance</Type>
+        <Key>AVEVA.Steelwork.CommandModifySectionMitreEnds</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAABl0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuND6NzHYAAAB/SURBVDhP1ZDRCcAgDEQzetfoBv3oQF2h0B1sLphwEUEL/WgfHJrzjBL5Pvu2lrp9TFkWweVYzZ3Awk67r+qSwoB/wHhWFcTl6zwioNG0QjgHXquMZGJwEDdwzzOUN8zw10cNOKsykvlaAx7isAFEZjqshA+oTnTNhpnMfxC5Ac7tBByzy5EmAAAAAElFTkSuQmCC</Image>
+      <Caption>Mitre Ends</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>Sections</Category>
+    </ButtonTool>
+    <ButtonTool Name="ZEP.DesignGeneral.ButtonReorder">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!CDCREOAFT</Macro>
+        <Key>Macro:fdcf8899-bd34-44b5-b940-cbc6da0c580a</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_REORDER</ImageResourceId>
+      <Caption>Reorder</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>DesignGeneral</Category>
+    </ButtonTool>
+    <ButtonTool Name="ZEPPELIN.Sections.ButtonModifySectionDefinition">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!strSectionEdit</Macro>
+        <Key>Macro:b4b95be3-e4f4-45c0-9681-2e5ca26fabe6</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_MODIFY_SECTIONS_DEFINITION</ImageResourceId>
+      <Caption>Definition</Caption>
+      <HelpContext />
+      <Tooltip>Modify Section Definition</Tooltip>
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>Sections</Category>
+    </ButtonTool>
+    <ButtonTool Name="UserGridSystems">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!displayGrids</Macro>
+        <Key>Macro:09cd1e08-a7e4-478b-b37d-cacc78e90e1b</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_USER_GRIDS</ImageResourceId>
+      <Caption>User Grid Systems</Caption>
+      <HelpContext />
+      <Tooltip>Classic User Grid System</Tooltip>
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>View</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.CreaterealGrid">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>Call !!createrealgrid()</Macro>
+        <Key>Macro:bfa588ee-9a8c-42c3-a4dc-e19865babfb8</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsSAAALEgHS3X78AAAAGHRFWHRTb2Z0d2FyZQBQYWludC5ORVQgdjMuMzE3g3eGAAAAkklEQVQ4T2NAA2lA/A7CxArMgPg3EMuCeVgAIQPMgfg/EMuBeVDgBMReUDwJiD8j8dFxIRCDDIhHEmN4CsQgQXIxAzcQ80JxHhC/R+KjY0cgBmnSRBJDAWSFATIYNYBMA84i4YdA/AdNDBnfAGKQAZeh/D1AzNCJhHcA8Xc0MWS8CIhBBkyD8muBGAUMuUBkYAAA9CtN2CXsc+0AAAAASUVORK5CYII=</Image>
+      <Caption>Create real Grid</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+      <Category>Design General</Category>
+    </ButtonTool>
+    <ButtonTool Name="Zeppelin.Button9">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!EuCCreateCone</Macro>
+        <Key>Macro:2e8b6243-10c9-4bb8-8318-7c785dcf67ca</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>Shared:CONE</ImageResourceId>
+      <Caption>Cone</Caption>
+      <HelpContext />
+      <TooltipFormattedText>Create &amp;amp; Modify CONE</TooltipFormattedText>
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+  </Tools>
+  <InstanceTools />
+  <MenuBar />
+  <CommandBars />
+  <TaskPanes />
+  <ContextMenus />
+  <AreaLeftTools />
+  <AreaRightTools />
+  <FooterTools />
+  <NavigationMenuTools />
+  <QATTools />
+  <ContextualTabGroups />
+  <TabToolbarTools />
+  <Tabs>
+    <Tab Name="ZeppelinBonus">
+      <Caption>Zeppelin - Bonus</Caption>
+      <ContextualTabGroup>
+        <Item>None</Item>
+      </ContextualTabGroup>
+      <Groups>
+        <Group Name="Aveva.Zeppelin - BonusGroup1">
+          <Tools>
+            <Tool Name="Zeppelin.Square2Round" IsFirstInGroup="False" LargeImage="True" />
+          </Tools>
+          <Caption>Tools</Caption>
+        </Group>
+        <Group Name="Aveva.Zeppelin - BonusGroup2">
+          <Tools>
+            <Tool Name="Zeppelin.Button3" IsFirstInGroup="False" LargeImage="True" />
+            <Tool Name="Zeppelin.Button4" LargeImage="True" />
+            <Tool Name="Zeppelin.Button5" />
+            <Tool Name="Zeppelin.Button7" />
+            <Tool Name="Zeppelin.Button6" />
+            <Tool Name="Zeppelin.SAPMTO" IsFirstInGroup="False" LargeImage="True" />
+          </Tools>
+          <Caption>MTO</Caption>
+        </Group>
+        <Group Name="Zeppelin.Zeppelin - BonusGroup3">
+          <Tools>
+            <Tool Name="Zeppelin.3DText" IsFirstInGroup="False" LargeImage="True" />
+            <Tool Name="Zeppelin.WTreppe" LargeImage="True" />
+            <Tool Name="Zeppelin.Avasorthierachy" LargeImage="True" />
+            <Tool Name="Zeppelin.CreaterealGrid" LargeImage="True" />
+          </Tools>
+          <Caption>Extra</Caption>
+        </Group>
+        <Group Name="Zeppelin.Zeppelin - Pipework Toolbox">
+          <Tools>
+            <Tool Name="Zeppelin.Button2" LargeImage="True" />
+          </Tools>
+          <Caption>Pipe Werkzeugkiste </Caption>
+          <KeyTip>Pipe Werkzeugkiste </KeyTip>
+        </Group>
+        <Group Name="Zeppelin.Zeppelin - BonusGroup5">
+          <Tools>
+            <Tool Name="Zeppelin.SectionEXT" />
+            <Tool Name="Zeppelin.MitreEnds" />
+            <Tool Name="Zeppelin.CreateFit" />
+            <Tool Name="AVEVA.Gensecs.ContextFixingModify" />
+          </Tools>
+          <Caption>Steelwork</Caption>
+        </Group>
+        <Group Name="Zeppelin.Zeppelin - BonusGroup6">
+          <Tools>
+            <Tool Name="Zeppelin.Button1" />
+            <Tool Name="Zeppelin.Button8" />
+            <Tool Name="Zeppelin.Button9" />
+          </Tools>
+          <Caption>Equipment</Caption>
+        </Group>
+        <Group Name="Zeppelin.Zeppelin - BonusGroup7">
+          <Tools>
+            <Tool Name="ClassicModelEditor" />
+            <Tool Name="AVEVA.DesignGeneral.ButtonProperties" />
+            <Tool Name="ZEP.DesignGeneral.ButtonReorder" />
+          </Tools>
+          <Caption>CommonTools</Caption>
+        </Group>
+      </Groups>
+    </Tab>
+  </Tabs>
+  <MiniToolbarTools />
+  <BackstageCaption />
+  <Namespace>Zeppelin</Namespace>
+</UserInterfaceCustomization>

@@ -1,0 +1,437 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtobuilder.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.02.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO controller
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtobuilder
+  
+  -- MTO data arrays
+  member .pipes       is ARRAY
+  member .mtopipes    is ARRAY
+
+  member .specs       is ARRAY
+  member .mtospecs    is ARRAY
+
+  member .mtosumm     is ARRAY
+  
+endobject
+
+-- End of object definition for mtobuilder
+
+------------------------------------------------------------------------
+--
+-- Method:      mtobuilder
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtobuilder()
+  
+  !!mtobuilderror = array()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      runmtobuild
+--
+-- Description: build mto data structure
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .runmtobuild(!mtoextract is MTOEXTRACTOR, !mtoconfig is MTOCONFIGURATION, !mtodef is MTOSETTINGS)
+
+  !!mtobuilderror = array()
+  
+  !this.mtopipes.clear()
+  !this.mtospecs.clear()
+  !this.mtosumm.clear()
+  !this.pipes.clear()
+  
+  !this.specs = !mtoextract.allspec
+  
+  PROMPT |Step 2 / 5 - Build MTO data for PIPEs|
+  !!fmsys.setprogress(0)
+  
+  !allbmemqty  = array() 
+  !allbmemitem = array() 
+  !allbmemsort = array() 
+  !allbmemspref = array() 
+  !allbmemspec = array() 
+  !allbmemuid  = array()
+  
+  !allboltdata  = array() 
+  !allboltitem  = array() 
+  !allboltsort  = array() 
+  !allboltspec  = array() 
+  !allboltuid   = array() 
+  
+  !sz = !mtoextract.pipes.size()
+  
+  do !i index !mtoextract.pipes
+
+    !this.pipes.append(!mtoextract.pipes[$!i])
+    
+    !tmppipe = array()
+
+    !bmemqty   = !mtoextract.MTOQTYDATA[$!i]
+    !bmemitem  = !mtoextract.MTOREFNODATA[$!i]
+    !bmemsort  = !mtoextract.MTOSORTDATA[$!i]
+    !bmemspref = !mtoextract.MTOSPREFDATA[$!i]
+    !bmemspec  = !mtoextract.MTOSPECDATA[$!i]
+    !bmemuid   = !mtoextract.MTOUIDDATA[$!i]
+    
+    if !mtodef.bolts eq TRUE and !mtodef.siklaMode neq |ONLY| then
+      !boltdata  = !mtoextract.MTOBOLTDATA[$!i]
+      !boltitem  = !mtoextract.MTOBOLTITEM[$!i]
+      !boltsort  = !mtoextract.MTOBOLTSORT[$!i]
+      !boltspec  = !mtoextract.MTOBOLTSPEC[$!i]
+      !boltuid   = !mtoextract.MTOBOLTUID[$!i]
+    endif
+    
+    if !mtodef.sumsp eq TRUE or !mtodef.summs eq TRUE then
+      -- build summary arrays
+      !allbmemqty.appendarray(!bmemqty)
+      !allbmemitem.appendarray(!bmemitem)
+      !allbmemsort.appendarray(!bmemsort)
+      !allbmemspref.appendarray(!bmemspref)
+      !allbmemspec.appendarray(!bmemspec)
+      !allbmemuid.appendarray(!bmemuid)
+      
+      if !mtodef.bolts eq TRUE and !mtodef.siklaMode neq |ONLY| then
+        !allboltdata.appendarray(!boltdata)
+        !allboltitem.appendarray(!boltitem)
+        !allboltsort.appendarray(!boltsort)
+        !allboltspec.appendarray(!boltspec)
+        !allboltuid.appendarray(!boltuid)
+      endif
+    endif
+    
+    if !mtodef.pipes eq TRUE then
+      -- create PIPE MTOs
+      
+      !useduid = array()
+      
+      -- BRAN MEM
+      if !mtodef.psorthier eq TRUE then
+        
+        -- sort by hierarchy
+        do !uid value !bmemuid
+          !chk = !useduid.find(!uid)
+          if !chk.unset() then
+            !useduid.append(!uid)
+            !ind = !bmemuid.find(!uid)
+            !mtol = object mtolinedata()
+            do !j value !ind
+              !mtol.add(!bmemqty[$!j],!uid,!bmemitem[$!j],!bmemspref[$!j])
+            enddo
+            !tmppipe.append(!mtol)
+          endif
+        enddo
+        
+      else
+        
+        -- sort by config
+        !unisort = !bmemsort
+        !unisort.sortunique()
+        
+        do !sid value !unisort
+          !ind = !bmemsort.find(!sid)
+          !uids = array()
+          do !j value !ind
+            !uids.append(!bmemuid[$!j])
+          enddo
+          !uids.unique()
+          
+          do !uid value !uids
+            !chk = !useduid.find(!uid)
+            if !chk.unset() then
+              !useduid.append(!uid)
+              !ind = !bmemuid.find(!uid)
+              !mtol = object mtolinedata()
+              do !j value !ind
+                !mtol.add(!bmemqty[$!j],!uid,!bmemitem[$!j],!bmemspref[$!j])
+              enddo
+              !tmppipe.append(!mtol)
+            endif
+          enddo
+        enddo
+        
+      endif
+
+      -- BOLTING
+      
+      if !mtodef.bolts eq TRUE and !mtodef.siklaMode neq |ONLY| then
+        
+        -- sort by PML code definiton  
+        !unisort = !boltsort
+        !unisort.sortunique()
+        
+        do !sid value !unisort
+          !ind = !boltsort.find(!sid)
+          !uids = array()
+          do !j value !ind
+            !uids.append(!boltuid[$!j])
+          enddo
+          !uids.unique()
+          
+          do !uid value !uids
+            !chk = !useduid.find(!uid)
+            if !chk.unset() then
+              !useduid.append(!uid)
+              !ind = !boltuid.find(!uid)
+              !mtol = object mtolinedata()
+              do !j value !ind
+                !mtol.add(!uid,!boltitem[$!j],!boltdata[$!j])
+              enddo
+              !tmppipe.append(!mtol)
+            endif
+          enddo
+        enddo
+        
+      endif
+      
+      !this.mtopipes.append(!tmppipe)
+      
+    endif
+    
+    !pro = !i / !sz * 100
+    !!fmsys.setprogress(!pro)
+    
+  enddo
+  
+  $(
+  !!chkarray = array()
+  !!chkarray[1] = !allbmemqty
+  !!chkarray[2] = !allbmemitem
+  !!chkarray[3] = !allbmemsort
+  !!chkarray[4] = !allbmemspref
+  !!chkarray[5] = !allbmemspec
+  !!chkarray[6] = !allbmemuid
+  !!chkarray[11] = !allboltdata
+  !!chkarray[12] = !allboltitem
+  !!chkarray[13] = !allboltsort
+  !!chkarray[14] = !allboltspec
+  !!chkarray[15] = !allboltuid
+  
+  $P q var !!chkarray
+  $)
+  
+  PROMPT |Step 3 / 5 - Build MTO data for Summarys|
+  !!fmsys.setprogress(0)
+  
+  if !mtodef.summs eq TRUE then
+    !sz = !this.specs.size() + 1
+  else
+    !sz = !this.specs.size() + 1
+  endif
+  
+  if !mtodef.sumsp eq TRUE then
+    
+    -- create SPEC MTOs
+    do !i index !this.specs
+      
+      !spec = !this.specs[$!i]
+      !tmpspec = array()
+      !useduid = array()
+      
+      -- filter array elements by spec
+      !spind = !allbmemspec.find(!spec)
+      !specbmemqty = array()
+      !specbmemitem = array()
+      !specbmemsort = array()
+      !specbmemspref = array()
+      !specbmemuid = array()
+      do !ii value !spind
+        !specbmemqty.append(!allbmemqty[$!ii])
+        !specbmemitem.append(!allbmemitem[$!ii])
+        !specbmemsort.append(!allbmemsort[$!ii])
+        !specbmemspref.append(!allbmemspref[$!ii])
+        !specbmemuid.append(!allbmemuid[$!ii])
+      enddo
+      
+      -- get BRAN MEM
+      
+      -- sort by config
+      !unisort = !specbmemsort
+      !unisort.sortunique()
+      
+      do !sid value !unisort
+        !ind = !specbmemsort.find(!sid)
+        !uids = array()
+        do !j value !ind
+          !uids.append(!specbmemuid[$!j])
+        enddo
+        !uids.unique()
+        
+        do !uid value !uids
+          !chk = !useduid.find(!uid)
+          if !chk.unset() then
+            !useduid.append(!uid)
+            !ind = !specbmemuid.find(!uid)
+            !mtol = object mtolinedata()
+            do !j value !ind
+              !mtol.add(!specbmemqty[$!j],!uid,!specbmemitem[$!j],!specbmemspref[$!j])
+            enddo
+            !tmpspec.append(!mtol)
+          endif
+        enddo
+      enddo
+      
+      -- BOLTING
+      
+      !spind = !allboltspec.find(!spec)
+      !specboltdata = array()
+      !specboltitem = array()
+      !specboltsort = array()
+      !specboltuid = array()
+      do !ii value !spind
+        !specboltdata.append(!allboltdata[$!ii])
+        !specboltitem.append(!allboltitem[$!ii])
+        !specboltsort.append(!allboltsort[$!ii])
+        !specboltuid.append(!allboltuid[$!ii])
+      enddo
+      
+      -- sort by PML code definiton
+      !unisort = !specboltsort
+      !unisort.sortunique()
+      
+      do !sid value !unisort
+        !ind = !specboltsort.find(!sid)
+        !uids = array()
+        do !j value !ind
+          !uids.append(!specboltuid[$!j])
+        enddo
+        !uids.unique()
+        
+        do !uid value !uids
+          !chk = !useduid.find(!uid)
+          if !chk.unset() then
+            !useduid.append(!uid)
+            !ind = !specboltuid.find(!uid)
+            !mtol = object mtolinedata()
+            do !j value !ind
+              !mtol.add(!uid,!specboltitem[$!j],!specboltdata[$!j])
+            enddo
+            !tmpspec.append(!mtol)
+          endif
+        enddo
+      enddo
+      
+      !this.mtospecs.append(!tmpspec)
+      
+      !pro = !i / !sz * 100
+      !!fmsys.setprogress(!pro)
+      
+    enddo
+    
+  endif
+  
+  if !mtodef.summs eq TRUE then
+    -- create summary MTO
+    
+    !tmpsumm = array()
+    !useduid = array()
+    
+    -- get BRAN MEM
+    
+    -- sort by config
+    !unisort = !allbmemsort
+    !unisort.sortunique()
+    
+    do !sid value !unisort
+      !ind = !allbmemsort.find(!sid)
+      !uids = array()
+      do !j value !ind
+        !uids.append(!allbmemuid[$!j])
+      enddo
+      !uids.unique()
+      
+      do !uid value !uids
+        !chk = !useduid.find(!uid)
+        if !chk.unset() then
+          !useduid.append(!uid)
+          !ind = !allbmemuid.find(!uid)
+          !mtol = object mtolinedata()
+          do !j value !ind
+            !mtol.add(!allbmemqty[$!j],!uid,!allbmemitem[$!j],!allbmemspref[$!j])
+          enddo
+          !tmpsumm.append(!mtol)
+        endif
+      enddo
+    enddo
+    
+    -- BOLTING
+    
+    -- sort by PML code definiton
+    !unisort = !allboltsort
+    !unisort.sortunique()
+    
+    do !sid value !unisort
+      !ind = !allboltsort.find(!sid)
+      !uids = array()
+      do !j value !ind
+        !uids.append(!allboltuid[$!j])
+      enddo
+      !uids.unique()
+      
+      do !uid value !uids
+        !chk = !useduid.find(!uid)
+        if !chk.unset() then
+          !useduid.append(!uid)
+          !ind = !allboltuid.find(!uid)
+          !mtol = object mtolinedata()
+          do !j value !ind
+            !mtol.add(!uid,!allboltitem[$!j],!allboltdata[$!j])
+          enddo
+          !tmpsumm.append(!mtol)
+        endif
+      enddo
+    enddo
+    
+    !this.mtosumm = !tmpsumm
+    
+    !!fmsys.setprogress(100)
+    
+  endif
+  
+  PROMPT ||
+  !!fmsys.setprogress(0)
+  
+endmethod

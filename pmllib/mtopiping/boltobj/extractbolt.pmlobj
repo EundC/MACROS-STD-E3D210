@@ -1,0 +1,332 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2013 to Current Year  AVEVA AG
+--
+-- File:            extractbolt.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2013/01/16 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Object for bolting
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object extractbolt
+
+  -- Text
+  member .item       is DBREF
+  member .data       is ARRAY
+  member .start      is DBREF
+  member .end        is DBREF
+  member .items      is ARRAY
+
+endobject
+-- End of object definition for extractbolt
+
+------------------------------------------------------------------------
+--
+-- Method:      extractbolt
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .extractbolt()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      extractbolt
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      DBREF       Bolted element
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .extractbolt(!item is DBREF)
+  
+  !unset      = object dbref()
+  !this.item  = !item
+  !this.start = !unset
+  !this.end   = !unset
+  !this.data.clear()
+  !this.items.clear()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getbolts
+--
+-- Description: get bolt data
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getBolts()
+
+  -- determine if new bolting method from first member's spec
+--    !firstSpec = '/' & !this.item.spref.name.split('/')[2]
+--    !firstSpec = name of spec of spref
+    !firstSpec = !this.item.spref.ownlst[2].name
+    if (!firstSpec.dbRef().bltm eq 'NEW') then
+
+      -- check for bolts defined by new method
+--        skip if (!this.item.type eq 'TUBI')
+        if (!this.item.type eq 'TUBI') then
+          !mess = |ERROR -  | + !this.item.name + | - TUBI found in bolting calculation!|
+          RETURN ERROR 1 '$!mess'
+        endif
+        
+        -- check if bolts will be allocated to branch head
+        !chkbool = !this.boltedHead(!this.item)
+        handle(2,201)
+          !chkbool = FALSE
+        endhandle
+        
+--        $P $!chkbool
+        
+        if (!chkbool) then
+
+          var !boltTotal PA BOLT TOTAL OF $!this.item
+          
+          -- ignore if no bolts
+          -- NEW HANDLE for P3 of TEEs
+          handle(61,638)
+            !connItem = !!splPcref(!this.item.owner.members.first(), !this.item.owner.members.first().arrive)
+            
+            -- PIPE not correct!
+            if !connItem[2].unset() then
+	      RETURN ERROR 1 'Bolt Error - Connection not correct for $!this.item' NOALERT
+	    endif
+
+--            if !connItem[2].type eq |TEE| or !connItem[2].type eq |VTWA| or !connItem[2].type eq |VFWA| then
+            if !connItem[2].type eq |TEE| then
+              !pp = |P| + !connitem[3].string()
+              var !boltTotal $!pp BOLT TOTAL OF $!connItem[2]
+              handle any
+              elsehandle none
+                do !number to !boltTotal.real()
+                  !this.data.append(OBJECT boltdata(!this.item, !connItem[3], !number, true, !connItem[2]))
+                enddo
+              endhandle
+            else
+            endif
+          elsehandle any
+          elsehandle none
+            if (!this.boltedNotTail(!this.item)) then
+              do !number to !boltTotal.real()
+                !this.data.append(OBJECT boltdata(!this.item, !this.item.arrive, !number, true))
+              enddo
+            else
+              do !number to !boltTotal.real()
+                !this.data.append(OBJECT boltdata(!this.item, !this.item.arrive, !number, false))
+              enddo
+            endif
+          endhandle
+        endif
+
+        -- check if bolts will be allocated downstream
+        
+--        !chkbool2 = !this.boltedNotTail(!this.item)
+--        $P $!chkbool2
+        
+        if (!this.boltedNotTail(!this.item)) then
+
+          var !boltTotal PL BOLT TOTAL OF $!this.item
+
+          -- ignore if no bolts
+          -- NEW HANDLE for P3 of TEEs
+          handle(61,638)
+            !connItem = !!splPcref(!this.item.owner.members.last(), !this.item.owner.members.last().leave)
+            
+            if !connItem[2].unset() then
+              RETURN ERROR 1 'Bolt Error - Connection not correct for $!this.item' NOALERT
+            endif
+            
+--            if !connItem[2].type eq |TEE| or !connItem[2].type eq |VTWA| or !connItem[2].type eq |VFWA| then
+            if !connItem[2].type eq |TEE| then
+              !pp = |P| + !connitem[3].string()
+              var !boltTotal $!pp BOLT TOTAL OF $!connItem[2]
+              handle any
+              elsehandle none
+              do !number to !boltTotal.real()
+                !this.data.append(OBJECT boltdata(!this.item, !connItem[3], !number, false, !connItem[2]))
+              enddo
+              endhandle
+            else
+            endif
+          elsehandle any
+          elsehandle none
+            do !number to !boltTotal.real()
+              !this.data.append(OBJECT boltdata(!this.item, !this.item.leave, !number, false))
+            enddo
+          endhandle
+        endif
+
+    endif
+    
+    !this.items.sortunique()
+    
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      !boltedHead()
+--
+-- Description: check if bolts will be allocated to branch head
+--
+-- Method Type: Function
+--
+-- Arguments:
+--  [1] [R] [DBREF] [element at joint end]
+-- Returns:
+--  [BOOLEAN] [true if bolted across head]
+--
+------------------------------------------------------------------------
+
+define method .boltedHead(!element is DBREF) is BOOLEAN
+
+  -- check this is a bolted joint end
+  var !joint PA BOLT JOINT OF $!element
+  handle(2,201)
+    return false
+  endhandle
+  if (!joint ne 'End') then
+    return false
+  endif
+
+  -- track back along branch checking for bolted joint start
+  do !listPos from (!element.order - 1) to 1 by -1
+    !previous = !element.owner.members[!listPos]
+    var !joint PL BOLT JOINT OF $!previous
+    handle(2,201)
+      return false
+    endhandle
+    if (!joint eq 'Start') then
+      !this.start = !previous
+      return false
+    else
+      !this.items.append(!previous)
+    endif
+  enddo
+
+  -- no joint start found so must be bolted across head
+  -- bolts will be allocated to head if connected item is not in same pipe
+  -- (unless gasket is last member in other pipe - bolts go with gasket)
+  -- or if in same pipe but connected other than by pleave
+  !connItem = !!splPcref(!element.owner.members.first(), !element.owner.members.first().arrive)
+  if (!connItem[2].unset()) then
+    return false
+  else
+    !this.start = !connItem[2]
+    
+    -- HZO - 2017.09.18 - special for nozzle with out GASK
+    if !this.start.type eq |NOZZ| then
+      return TRUE
+    endif
+    
+    return ((!connItem[2].owner.owner ne !element.owner.owner and $
+            !connItem[2].type ne 'GASK') or !connItem[3] ne !connItem[2].leave)
+  endif
+
+endmethod
+-- End of method definition for .boltedHead(DBREF) BOOLEAN
+
+------------------------------------------------------------------------
+--
+-- Method:      !boltedNotTail()
+--
+-- Description: check if bolts will not be allocated downstream
+--
+-- Method Type: Function
+--
+-- Arguments:
+--  [1] [R] [DBREF] [element at joint start]
+-- Returns:
+--  [BOOLEAN] [true if bolted across tail]
+--
+------------------------------------------------------------------------
+
+define method .boltedNotTail(!element is DBREF) is BOOLEAN
+
+  -- check this is a bolted joint start
+  var !joint PL BOLT JOINT OF $!element
+  handle(2,201)
+    return false
+  endhandle
+  if (!joint ne 'Start') then
+    return false
+  endif
+
+  -- track forward along branch checking for bolted joint end
+  do !listPos from (!element.order + 1) to !element.owner.members.size()
+    !next = !element.owner.members[!listPos]
+    var !joint PA BOLT JOINT OF $!next
+    handle(2,201)
+      return false
+    endhandle
+    if (!joint eq 'End') then
+      !this.end = !next
+      return true
+    else
+      !this.items.append(!next)
+    endif
+  enddo
+  
+  -- no joint end found so must be bolted across tail
+  -- bolts will be allocated downstream if connected item is not in same pipe
+  -- (unless gasket is last member in this pipe - bolts go with gasket)
+  !connItem = !!splPcref(!element.owner.members.last(), !element.owner.members.last().leave)
+  handle(2,240)
+    return false
+  endhandle
+  if (!connItem[2].unset()) then
+    return false
+  else
+    !this.end = !connItem[2]
+    
+    -- HZO - 2017.09.18 - special for nozzle with out GASK
+    if !this.end.type eq |NOZZ| then
+      return TRUE
+    endif
+    
+    return (!connItem[2].owner.owner eq !element.owner.owner or $
+            !element.owner.members.last().type eq 'GASK')
+  endif
+
+endmethod
+-- End of method definition for .boltedNotTail(DBREF) BOOLEAN
+

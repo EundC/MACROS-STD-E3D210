@@ -1,0 +1,95 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2023 to Current Year  E&C GmbH
+--
+-- File:            mtoGetNetGridArray.pmlfnc
+--   Type:          Function mtoGetNetGridArray
+--   Group:         MTO Tool
+--     Keyword:     --
+--   Module:        design
+--   Replaces:      --
+--
+-- Author:          Herbert Zöchling
+-- Created:         Thu Jul 20 2023
+--
+-- Last modified by $Author:  $ on $Date:  $
+--                  $Revision: 1.0 $
+--
+-- Description:
+-- Get ARRAY for NETGRID
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--    
+------------------------------------------------------------------------
+
+-- Define function
+define function !!mtoGetNetGridArray(!attributes is ARRAY, !mtowldloaded is ARRAY) is ARRAY
+  
+    !tmpce = !!ce
+
+    !netData = ARRAY()
+
+    do !i index !mtowldloaded
+        
+        !element = !mtowldloaded[$!i].dbref()
+        handle any
+            skip
+        endhandle
+        
+        !line = array()
+        
+        do !attribute value !attributes
+            !value = ||
+            !tmpValue.delete()
+            handle any
+            endhandle
+
+            if !attribute.upcase().trim().matchwild(|PML *|) then
+                !pmlfnc = |mtoget| + !attribute.split()[2] + |($!element)|
+                !tmpValue = !!$!pmlfnc
+                handle any
+                    --$P $!pmlfnc - missing
+                    --q var !!error
+                    --q var !!error.callstack
+                elsehandle none
+                    !value = !tmpValue.string()
+                    handle any
+                    endhandle
+                endhandle
+            else
+                !expr = object expression(!attribute)
+                handle any
+                    -- q var !!error
+                    -- q var !!error.callstack
+                elsehandle none
+                    !tmpValue = !expr.evaluate(!element)
+                    handle any
+                        -- q var !!error
+                        -- q var !!error.callstack
+                    elsehandle none
+                        !value = !tmpValue.string()
+                        handle any
+                        endhandle
+                    endhandle
+                endhandle
+            endif
+
+            !line.append(!value)
+        enddo
+        !netData.append(!line)
+    enddo
+
+    $!tmpce
+    handle any
+    endhandle
+
+    return !netData
+
+endfunction

@@ -1,0 +1,51 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            MTOmodifiyDef.pmlfnc
+--   Type:          Function MTOmodifiyDef
+--   Group:         MTO Tool
+--     Keyword:     --
+--   Module:        design
+--   Replaces:      --
+--
+-- Author:          Herbert Zöchling
+-- Created:         Mon Jan 21 2013
+--
+-- Last modified by $Author:  $ on $Date:  $
+--                  $Revision: 1.0 $
+--
+-- Description:
+-- Check MTO Definiton, open Modify form
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--    
+------------------------------------------------------------------------
+
+-- Define function
+define function !!MTOmodifiyDef(!mtogrp is DBREF,!modflg is BOOLEAN)
+  
+  var !mtovers coll all ZONE with acttype eq |:MTOVERS| for $!mtogrp
+  var !rel eval :MTO-RELEASED for all from !mtovers
+  
+  !chkrel = !rel.find(|true|)
+  if !chkrel.empty().not() then
+    !ans = !!alert.confirm(|There are RELEASED Versions - Do you really want to modify these MTOs?|)
+    if !ans neq |YES| then
+      RETURN
+    endif
+  endif
+  
+  show !!MTOdefinition
+  !!MTOdefinition.mtodef = !mtogrp
+  !!MTOdefinition.loaddata()
+  !!MTOdefinition.modifyflag = !modflg
+  
+endfunction

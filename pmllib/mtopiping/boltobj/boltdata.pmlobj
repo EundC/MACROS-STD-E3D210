@@ -1,0 +1,179 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  1998 to Current Year  AVEVA Solutions Limited
+--
+-- File:            boltdata.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          M.Lewis
+-- Created:         Wed Apr 8 13:14:47 BST 1998
+--
+-- Last modified by $Author: Herbert Zöchling $ on $Date: 2013/01/15 13:27:16 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+-- Evaluate bolt MTO data for piping
+--
+------------------------------------------------------------------------
+--
+-- Methods defined:
+--   !boltdata()                   constructor (new bolting method)
+--   !boltdata()                   constructor (material control file data)
+--   !quantity()                        return quantity string
+--   !nominalSize()                     return nominal size string
+--
+------------------------------------------------------------------------
+
+define object boltdata
+
+  -- piping component
+  -- member .ce is DBREF
+
+  -- ppoint number
+  member .pPoint is REAL
+
+  -- bolt number for this ppoint
+  member .boltNo is REAL
+
+  -- bolt spref
+  member .spref is DBREF
+
+  -- bolt diameter
+  member .boltDiameter is REAL
+
+  -- bolt length
+  member .boltLength is REAL
+
+  -- bolt weight
+  member .boltWeight is REAL
+
+  -- number off
+  member .numbOff is REAL
+
+endobject
+-- End of object definition for boltdata
+
+------------------------------------------------------------------------
+--
+-- Method:      !boltdata()
+--
+-- Description: constructor (new bolting method)
+--
+-- Method Type: Procedure
+-- Arguments:
+--   [1] [R] [DBREF]         [bolted component]
+--   [2] [R] [REAL]          [ppoint number]
+--   [3] [R] [REAL]          [bolt number for ppoint]
+--   [4] [R] [BOOLEAN]       [use partno from branch if true]
+--
+------------------------------------------------------------------------
+
+define method .boltdata(!element is DBREF, !pPoint is REAL, !boltNo is REAL, !branPtno is BOOLEAN)
+
+  -- bolt reference data
+--  !this.ce = !element
+  if !branPtno and !element.tysequ eq 1 and !element.sequ lt 5 then
+    !brhcon = !element.owner.hcon.substring(1,1)
+    if !brhcon eq 'F' or !brhcon eq 'W' then
+--      !this.ce = !element.owner
+    endif
+  endif
+  !type = !element.type
+  !this.pPoint = !pPoint
+  !this.boltNo = !boltNo
+  
+  -- get bolt data for bolt of ppoint of element
+  var !boltLength PPOINT $!pPoint BOLT $!boltNo BLENGTH OF $!element
+  !this.boltLength = !boltLength.real()
+
+  var !boltDiameter PPOINT $!pPoint BOLT $!boltNo BDIAMETER OF $!element
+  !this.boltDiameter = !boltDiameter.real()
+
+  var !numbOff PPOINT $!pPoint BOLT $!boltNo NOFF OF $!element
+  !this.numbOff = !numbOff.real()
+
+  -- get spref and hence description and itemCode
+  var !sprefName PPOINT $!pPoint BOLT $!boltNo SPREF OF $!element
+  !this.spref = !sprefName.dbRef()
+  
+  -- get bolt weight
+  var !boltWeight PPOINT $!pPoint BOLT $!boltNo BWEIGHT OF $!element
+  !this.boltWeight = !boltWeight.real()
+  
+endmethod
+-- End of method definition for .boltdata(DBREF, REAL, REAL, BOOLEAN, STRING)
+
+------------------------------------------------------------------------
+--
+-- Method:      !boltdata()
+--
+-- Description: constructor (new bolting method)
+--
+-- Method Type: Procedure
+-- Arguments:
+--   [1] [R] [DBREF]         [bolted component]
+--   [2] [R] [REAL]          [ppoint number]
+--   [3] [R] [REAL]          [bolt number for ppoint]
+--   [4] [R] [BOOLEAN]       [use partno from branch if true]
+--   [1] [R] [DBREF]         [bolted component TEE]
+--
+------------------------------------------------------------------------
+
+define method .boltdata(!element is DBREF, !pPoint is REAL, !boltNo is REAL, !branPtno is BOOLEAN, !tee is DBREF)
+
+  -- bolt reference data
+--  !this.ce = !element
+  if !branPtno and !element.tysequ eq 1 and !element.sequ lt 5 then
+    !brhcon = !element.owner.hcon.substring(1,1)
+    if !brhcon eq 'F' or !brhcon eq 'W' then
+--      !this.ce = !element.owner
+    endif
+  endif
+  !type = !element.type
+  !this.pPoint = !pPoint
+  !this.boltNo = !boltNo
+  
+  -- get bolt data for bolt of ppoint of element
+  var !boltLength PPOINT $!pPoint BOLT $!boltNo BLENGTH OF $!tee
+  !this.boltLength = !boltLength.real()
+
+  var !boltDiameter PPOINT $!pPoint BOLT $!boltNo BDIAMETER OF $!tee
+  !this.boltDiameter = !boltDiameter.real()
+
+  var !numbOff PPOINT $!pPoint BOLT $!boltNo NOFF OF $!tee
+  !this.numbOff = !numbOff.real()
+
+  -- get spref and hence description and itemCode
+  var !sprefName PPOINT $!pPoint BOLT $!boltNo SPREF OF $!tee
+  !this.spref = !sprefName.dbRef()
+  
+  -- get bolt weight
+  var !boltWeight PPOINT $!pPoint BOLT $!boltNo BWEIGHT OF $!tee
+  !this.boltWeight = !boltWeight.real()
+  
+endmethod
+-- End of method definition for .boltdata(DBREF, REAL, REAL, BOOLEAN, STRING)
+
+------------------------------------------------------------------------
+--
+-- Method:      !quantity()
+--
+-- Description: return quantity string
+--
+-- Method Type: Function
+-- Returns:
+--   [STRING] [quantity]
+--
+------------------------------------------------------------------------
+
+define method .quantity() is STRING
+
+  return !this.numbOff.string('D0')
+
+endmethod
+-- End of method definition for .quantity() STRING
+

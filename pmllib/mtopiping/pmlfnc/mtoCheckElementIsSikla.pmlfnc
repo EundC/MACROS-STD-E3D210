@@ -1,0 +1,66 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoCheckElementIsSikla.pmlfnc
+--   Type:          Function mtoCheckElementIsSikla
+--   Group:         MTO Tool
+--     Keyword:     --
+--   Module:        design
+--   Replaces:      --
+--
+-- Author:          Herbert Zöchling
+-- Created:         Mon Jan 21 2013
+--
+-- Last modified by $Author:  $ on $Date:  $
+--                  $Revision: 1.0 $
+--
+-- Description:
+-- Check FLAN is connected to a TUBI or WELD
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--    
+------------------------------------------------------------------------
+
+-- Define function
+define function !!mtoCheckElementIsSikla(!elem is DBREF) is BOOLEAN
+  
+  !return = boolean()
+
+  if !elem.type eq |SPCO| then
+  	!spref = !elem
+  else
+    !spref = !elem.spref
+    handle any
+      RETURN !return
+    endhandle
+  endif
+  
+  !dbname = !spref.dbname
+  handle any
+    RETURN !return
+  endhandle
+
+  !return = false
+  if !dbname.matchwild('*SIKLA*') then
+    !return = true
+  endif
+  
+  if !spref.name.matchwild('/SIK/*') then
+    !return = true
+  endif
+
+  if !spref.name.matchwild('*SIKLA*') then
+    !return = true
+  endif
+
+  RETURN !return
+
+endfunction

@@ -1,0 +1,652 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA AG
+--
+-- File:            mtostructure.pmlobj
+--   Type:          Object Definition
+--   Group:         MTO Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2012/12/27 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Object for whatever
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtostructure
+
+  -- Text
+  member .mtogrp         is DBREF
+  member .mtolastrev     is DBREF
+  member .mtolastver     is DBREF
+  
+  member .newmtovers     is DBREF
+  
+  member .newmto         is DBREF
+  
+endobject
+-- End of object definition for mtostructure
+
+------------------------------------------------------------------------
+--
+-- Method:      mtostructure
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      DBREF       Element
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtostructure(!mtogrp is DBREF)
+  
+  if !mtogrp.badref() then
+    !mess = |Element given is BADREF!|
+    RETURN ERROR 1 '$!mess'
+  endif
+  
+  if !mtogrp.acttype neq |:MTOGRP| then
+    !mess = |Element given is not from ACTTYPE ":MTOGRP"|
+    RETURN ERROR 1 '$!mess'
+  endif
+  
+  !this.mtogrp = !mtogrp
+  
+  var !vers coll all ZONE with acttype eq |:MTOVERS| for $!mtogrp
+  var !latever eval :MTO-VERS-LATEST for all from !vers
+  var !laterev eval :MTO-REV-LATEST for all from !vers
+  
+  !ind = !latever.find('true')
+  if !ind.unset().not() then
+    !this.mtolastver = !vers[$!ind[1]].dbref()
+  else
+    !this.mtolastver = =0/0
+  endif
+
+  !ind = !laterev.find('true')
+  if !ind.unset().not() then
+    !this.mtolastrev = !vers[$!ind[1]].dbref()
+  else
+    !this.mtolastrev = =0/0
+  endif
+  
+  !update = array()
+  !update.append(!this.mtolastver)
+  !update.append(!this.mtolastrev)
+  !update.sortunique()
+  
+  -- update :MTODESLNK
+  !this.updatePipeLinks(!update)
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      newversion
+--
+-- Description: Create new version
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      DBREF       Element
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .newversion()
+  
+  if !this.mtogrp.badref() then
+    !mess = |MTOGRP given is BADREF!|
+    RETURN ERROR 1 '$!mess'
+  endif
+  
+  $!this.mtogrp
+  CLAIM CE HIER
+  handle any
+    !mess = |Could not claim MTOGRP!|
+    RETURN ERROR 1 '$!mess'
+  endhandle
+  
+  NEW :MTOVERS
+  !this.newmtovers = !!ce
+  
+  -- set flags
+  !this.newmtovers.:MTO-VERS-LATEST = true
+  !this.newmtovers.:MTO-REV-LATEST = false
+  !this.newmtovers.:MTO-RELEASED = false
+  
+  -- set creator information
+  !date = object datetime()
+  !y = !date.year().string()
+  !m = !date.month().string('I2')
+  !d = !date.date().string('I2')
+  !hh = !date.hour().string('I2')
+  !mm = !date.minute().string('I2')
+  
+  !crdate = !y + |.| + !m + |.| + !d + | - | + !hh + |:| + !mm
+  
+  -- get user info
+  var !user USER
+  
+  !useruda = array()
+  var !uu coll all uda with elelist num 1 eq |USER|
+  !useruda.appendarray(!uu)
+  var !uu coll all uda with elelist num 2 eq |USER|
+  !useruda.appendarray(!uu)
+  var !uu coll all uda with elelist num 3 eq |USER|
+  !useruda.appendarray(!uu)
+  
+  !useruda.sortunique()
+  !udaname = ||
+  do !i index !useruda
+    !dbuda = !useruda[$!i].dbref()
+    if !dbuda.udname.upcase().matchwild(|*NAME*|) then
+      !udaname = |:| + !dbuda.udname
+      BREAK
+    endif
+  enddo
+  
+  if !udaname neq || then
+    
+    !sernam = |/| + !user
+    !shortname = ||
+    -- try to get short name
+    var !prjuser coll all USER
+    do !i index !prjuser
+      !dbuser = !prjuser[$!i].dbref()
+      if !sernam eq !dbuser.name then
+        !shtnam = !dbuser.$!udaname
+        handle any
+          SKIP
+        elsehandle none
+          !shortname = !shtnam
+          BREAK
+        endhandle
+      endif
+    enddo
+    
+    if !shortname.replace(| |,||) eq || then
+      !userinfo = !user
+    else
+      !userinfo = !shortname
+    endif
+    
+  else
+    !userinfo = !user
+  endif
+  
+  -- get login info
+  var !login LOGIN
+  !tmp = ||
+  !lspl = !login.split(|.|)
+  do !subnam value !lspl
+    !tmpnam = !subnam.substring(1,1).upcase() + !subnam.substring(2).lowcase()
+    !tmp = !tmp + | | + !tmpnam
+  enddo
+  !tmp = !tmp.trim()
+  
+  !cruser = !tmp + | - | + !userinfo
+  
+  !this.newmtovers.:MTO-CRE-USER = !cruser
+  !this.newmtovers.:MTO-CRE-DATE = !crdate
+  
+  -- get/set new version/revision
+  if !this.mtolastver.badref().not() then
+    !vers = !this.mtolastver.:MTO-VERS
+    !this.mtolastver.:MTO-VERS-LATEST = FALSE
+    -- revision
+    if !this.mtolastrev.badref().not() then
+      if !this.mtolastver eq !this.mtolastrev and !this.mtolastrev.:MTO-RELEASED then
+        -- new revision!
+        !rev = !this.getnextrev(!this.mtolastver.:MTO-REV)
+        -- reset versioning?
+--        !vers = 0
+      else
+        !rev = !this.mtolastver.:MTO-REV
+      endif
+    else
+      !rev = !this.mtolastver.:MTO-REV
+    endif
+  else
+    !vers = 0
+    !rev = | |
+--    !rev = |-|
+  endif
+  
+  if !vers.unset() then
+    !vers = 0
+  endif
+  
+  !nvers = !vers + 1
+  
+  !this.newmtovers.:MTO-VERS = !nvers
+  !this.newmtovers.:MTO-REV  = !rev
+  
+  !dbname = !this.newmtovers.owner.name + |/Rev:| + !rev.replace(| |,|-|) + |/Vs:| + !nvers.string('I3')
+  !this.newmtovers.name = !dbname
+  handle any
+    !dbname = |/| + !this.newmtovers.owner.string() + |/Rev:| + !rev.replace(| |,|-|) + |/Vs:| + !nvers.string('I3')
+    !this.newmtovers.name = !dbname
+    handle any
+      $P $!!error.text
+      $P Could not set name $!dbname to :MTOVERS
+      RETURN ERROR 1 'A Name is needed for Report Designer... Please rename ":MTOGRP" !'
+    endhandle
+  endhandle
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getnextrev
+--
+-- Description: get next revision character
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      Revision Character
+-- Return:
+--   [Data Type] [Description]
+--    STRING      next Revision Character
+------------------------------------------------------------------------
+
+define method .getnextrev(!revin is STRING) is STRING
+  
+  !let = |A B C D E F G H I J K L M N O P Q R S T U V W X Y Z AA AB AC AD AE AF AG AH AI AJ AK AL AM AN AO AP AQ AR AS AT AU AV AW AX AY AZ|
+  !letter = !let.split()
+  
+  !ind = !letter.find(!revin.trim())
+  if !ind.empty() then
+    !rev = |A|
+  else
+    !n = !ind[1] + 1
+    !rev = !letter[$!n]
+  endif
+  
+  RETURN !rev
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      newmto
+--
+-- Description: Create MTO
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      MTO Type
+--    1   R      DBREF       Pipe, Spec, Nulref
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .newmto(!type is STRING, !elem is STRING)
+  
+  !dbele = !elem.dbref()
+  handle any
+    !dbele = =0/0
+  endhandle
+  !this.newmto(!type, !dbele)
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      newmto
+--
+-- Description: Create MTO
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      MTO Type
+--    1   R      DBREF       Pipe, Spec, Nulref
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .newmto(!type is STRING, !elem is DBREF)
+  
+  if !this.newmtovers.badref() then
+    !mess = |MTOVERS given is BADREF!|
+    RETURN ERROR 1 '$!mess'
+  endif
+  
+  $!this.newmtovers
+  CLAIM CE HIER
+  handle any
+    !mess = |Could not claim MTOVERS!|
+    RETURN ERROR 1 '$!mess'
+  endhandle
+  
+  if !type.upcase() eq |PIPE| then
+    if !elem.badref() then
+      !mess = |Element given for MTO is BADREF!|
+      RETURN ERROR 1 '$!mess'
+    endif
+    if !elem.type neq |PIPE| then
+      !mess = |Element "| + !elem.name + |" given for MTO is not a PIPE!|
+      RETURN ERROR 1 '$!mess'
+    endif
+    
+    NEW :MTOPIPE
+    !this.newmto = !!ce
+    !this.newmto.:MTODESLNK = !elem
+    !this.newmto.description = 'Pipe MTO: ' + !elem.namn
+    
+    -- find pipe rev
+    if !this.mtolastrev.badref().not() then
+      if !this.mtolastrev.:MTO-RELEASED eq TRUE then
+        !newrevflg = true
+      else
+        !newrevflg = false
+      endif
+      var !pmto coll all PIPE with acttype eq |:MTOPIPE| and :MTODESLNK eq $!elem for $!this.mtolastrev
+      
+      if !pmto.empty() then
+        !newrev = | |
+--        !newrev = |-|
+      else
+        !oldrev = !pmto[1].dbref().:MTO-PIPE-REV
+        !newrev = !oldrev
+--        do not create new revision here - change after mto run, if there are changes!
+--        !newrev = !this.getnextrev(!oldrev)
+      endif
+    else
+      !newrev = | |
+--      !newrev = |-|
+    endif
+    
+    !this.newmto.:MTO-PIPE-REV = !newrev
+    
+  elseif !type.upcase() eq |SUMM| then
+    if !elem.badref() then
+      -- complete summary MTO
+      NEW :MTOSUMM
+      !this.newmto = !!ce
+      !this.newmto.description = 'Overall MTO'
+    else
+      -- 2022.01.26 - HZO - GPART without SPEC for Sikla!
+      -- if !elem.type neq |SPEC| then
+      if !elem.type eq |SPEC| or !elem.type eq |PRTELE| or !elem.type eq |PRTWLD| then
+        -- OK
+      else
+        !mess = |Element "| + !elem.name + |" given for MTO is not a SPEC!|
+        RETURN ERROR 1 '$!mess'
+      endif
+      NEW :MTOSUMM
+      !this.newmto = !!ce
+      !this.newmto.:MTO-SPREF = !elem
+      !this.newmto.description = 'Pipe class MTO: ' + !elem.namn
+    endif
+    
+    if !this.mtolastrev.badref().not() then
+      
+      if !elem.badref() then
+        var !smto coll all PIPE with acttype eq |:MTOSUMM| and unset(:MTO-SPREF) for $!this.mtolastrev
+      else
+        var !smto coll all PIPE with acttype eq |:MTOSUMM| and :MTO-SPREF eq $!elem for $!this.mtolastrev
+      endif
+      
+      if !smto.empty() then
+        !newrev = | |
+--        !newrev = |-|
+      else
+        !oldrev = !smto[1].dbref().:MTO-PIPE-REV
+        !newrev = !oldrev
+--        do not create new revision here - change after mto run, if there are changes!
+--        !newrev = !this.getnextrev(!oldrev)
+      endif
+    else
+      !newrev = | |
+--      !newrev = |-|
+    endif
+    
+    !this.newmto.:MTO-PIPE-REV = !newrev
+    
+  else
+    !mess = |MTO Type is unknown!|
+    RETURN ERROR 1 '$!mess'
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      newmtolines
+--
+-- Description: Create MTO Lines
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      MTO Type
+--    1   R      DBREF       Pipe, Spec, Nulref
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .newmtolines(!data is ARRAY, !mtoconf is MTOCONFIGURATION)
+  
+  if !this.newmto.badref() then
+    !mess = |MTO given is BADREF!|
+    RETURN ERROR 1 '$!mess'
+  endif
+  
+  $!this.newmto
+  CLAIM CE HIER
+  handle any
+    !mess = |Could not claim MTO!|
+    RETURN ERROR 1 '$!mess'
+  endhandle
+  
+  if !this.newmto.mcount neq 0 then
+    !mess = |MTO already contain members!|
+    RETURN ERROR 1 '$!mess'
+  endif
+  
+  do !mtoldata value !data
+    
+    NEW :MTOLINE
+    !mtol = !!ce
+    
+    !mtol.:MTO-QTY-NEW = !mtoldata.qty.value()
+    !mtol.:MTO-UID     = !mtoldata.uid
+    !mtol.:MTO-SPREF   = !mtoldata.spref
+    !mtol.:MTO-GTYPE   = !mtoldata.spref.catref.gtype
+    handle any
+      !mtol.:MTO-GTYPE = |ZZZZ|
+    endhandle
+    
+    if !mtoldata.isbolt eq TRUE then
+      !mtoconf.copydata(!mtoldata.boltdata, !mtol)
+    else
+      -- check for TYPE, because of WELD & TUBI MIX!!
+      -- !item = !mtoldata.items.first()
+      !item = =0/0
+      do !ele value !mtoldata.items
+        if !mtol.:MTO-GTYPE eq !ele.spref.catref.gtype then
+          !item = !ele
+          BREAK
+        endif
+      enddo
+      
+      if !item.badref() then
+        if !mtol.:MTO-GTYPE eq |TUBE| then
+          !item = !mtoldata.items.first().lstube
+          !!errorlog.append(|WARNING - MTOLINE: | + !mtol.name + | - GTYPE TUBE! - Data for element is evaluated from LSTUBE!!|)
+        else
+          !item = !mtoldata.items.first()
+          !!errorlog.append(|ERROR - MTOLINE: | + !mtol.name + | - GTYPE Mix! - Detailtext may not be correct!|)
+        endif
+      endif
+      
+      !mtoconf.copydata(!item, !mtol)
+    endif
+    
+    $!mtol
+    do !ele value !mtoldata.items
+      NEW :MTOELEM
+      !!ce.:MTODESELE = !ele.string()
+    enddo
+    $!mtol
+    
+  enddo
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      releaseMto
+--
+-- Description: release latest version
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .releaseMto()
+  
+  if !this.mtogrp.badref() then
+    !mess = |MTOGRP given is BADREF!|
+    RETURN ERROR 1 '$!mess'
+  endif
+  
+  $!this.mtogrp
+  CLAIM CE HIER
+  handle any
+    !mess = |Could not claim MTOGRP!|
+    RETURN ERROR 1 '$!mess'
+  endhandle
+  
+  -- get/set new version/revision
+  if !this.mtolastver.badref().not() then
+    if !this.mtolastver.:MTO-RELEASED eq TRUE then
+      -- already released!
+    else
+      if !this.mtolastrev.badref().not() then
+        !this.mtolastrev.:MTO-REV-LATEST = FALSE
+      endif
+      !this.mtolastver.:MTO-RELEASED = TRUE
+      !this.mtolastver.:MTO-REV-LATEST = TRUE
+    endif
+  endif
+  
+  -- write posno to design?
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      update PIPE Links
+--
+-- Description: update :MTODESLNK for :MTOPIPE
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .updatePipeLinks(!mtovers is ARRAY)
+  
+  do !mtov value !mtovers
+    
+    if !mtov.badref() then
+      SKIP
+    endif
+    
+    do !mto value !mtov.member
+      
+      if !mto.acttype eq |:MTOPIPE| then
+        
+        !deslnk = !mto.:MTODESLNK
+        if !deslnk.badref().not() then
+          -- update name
+          !mto.:MTODESLNKNAME = !mto.:MTODESLNK.name
+          handle any
+            !mess = |WARNING - MTO Structure: "| + !mto.string() + |", Could not update :MTODESLNKNAME - | + !!error.text
+            if defined(!!errorlog) then
+              !!errorlog.append(!mess)
+            else
+              $P $!mess
+            endif
+          endhandle
+        else
+          -- try to relink
+          !name = !mto.:MTODESLNKNAME
+          !dbele = !name.dbref()
+          handle any
+            -- not exitsing
+            !mess = |WARNING - MTO Structure: "| + !mto.string() + |", Could not relink MTO - | + !!error.text
+            if defined(!!errorlog) then
+              !!errorlog.append(!mess)
+            else
+              $P $!mess
+            endif
+            SKIP
+          elsehandle none
+            if !dbele.badref() then
+              !mess = |WARNING - MTO Structure: "| + !mto.string() + |", Could not relink MTO - All link data has been lost...|
+              if defined(!!errorlog) then
+                !!errorlog.append(!mess)
+              else
+                $P $!mess
+              endif
+              SKIP
+            endif
+            if !dbele.type eq |PIPE| then
+              !mto.:MTODESLNK = !dbele
+              handle any
+                !mess = |WARNING - MTO Structure: "| + !mto.string() + |", Could not relink MTO - | + !!error.text
+                if defined(!!errorlog) then
+                  !!errorlog.append(!mess)
+                else
+                  $P $!mess
+                endif
+              endhandle
+            else
+              -- not valid
+              SKIP
+            endif
+          endhandle
+        endif
+        
+      endif
+      
+    enddo
+    
+  enddo
+  
+endmethod

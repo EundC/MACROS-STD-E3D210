@@ -1,0 +1,437 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            MTOprintRD.pmlfrm
+--   Type:          Form Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        common
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/03/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Form for MTO printing by Report Designer
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+setup form !!MTOprintRD dialog
+  
+  title |AVEVA MTO Export by Report Designer|
+  
+  path down
+  
+  frame .frame0 anchor all
+    
+    frame .frame1 'Options' anchor all
+      
+      frame .gRadioFile |Output File| at xmin .frame1 ymin .frame1 anchor T+L
+        rToggle   .radfile1   'One file (multiple sheets)'         at xmin .gRadioFile ymin .gRadioFile  tagwidth 17
+        rToggle   .radfile2   'Multiple files (single sheets)'     at xmin .radfile1   ymax .radfile1    tagwidth 17
+--        rToggle   .radfile1   'One file'         at xmin .gRadioFile ymin .gRadioFile  tagwidth 8
+--        rToggle   .radfile2   'Multiple files'     at xmax .radfile1   ymin .radfile1    tagwidth 8
+--        para .paraFile1 at xmin .radfile1  ymax .radfile1  width 10 hei 1
+--        para .paraFile2 at xmin .radfile2  ymax .radfile2  width 10 hei 1
+      exit
+
+      frame .gRadioMode |Output Mode| at xmax .gRadioFile +1 ymin .gRadioFile anchor T+L 
+        rToggle   .radmode1   'Graphics'        at xmin .gRadioMode ymin .gRadioMode  tagwidth 6
+        rToggle   .radmode2   'TTY'             at xmax .radmode1   ymin .radmode1    tagwidth 4
+      exit
+      
+      frame .frame10 |Output formats| at xmin .gRadioFile ymax .gRadioFile +0.25 anchor T+L hei 1
+        toggle .pdf |PDF|   at xmin .frame10 ymin .frame10 +0.1
+        toggle .xls |XLSX|  at xmax .pdf ymin .pdf
+        toggle .sap |SAP|  at xmax .xls ymin .pdf tagwidth 4
+        para .paraSap at xmax .sap -1  ymin .sap -0.1  width 10 hei 2 
+      exit
+      frame .frame11 'Outputfolder:' at xmin .frame1 ymax .frame10 +0.25 anchor all
+        button .browser 'Browse...' callback '!this.startbrowser()' at xmin .frame11 ymin .frame11 width 6
+        para   .folder  at xmax .browser +1 ymin .browser   text '                                      '
+      exit
+      
+      frame .frame12 'Filename Appendix:' anchor all at xmin .frame1 ymax .frame11 +0.25
+        text .appendix   at xmin .frame12 ymin .frame12 width 45 is STRING
+      exit
+      
+      list .list callback '!this.selectrep()' at xmin .frame1 ymax .frame12 + 0.25 anchor all hei 8 width 45
+    exit
+    
+    
+    button .print 'Export' callback '$m/%pmllib%\mtopiping\pmlfnc\mtoprintTTY.mac' at xmax .frame0 - size ymax .frame1 + 0.5
+    
+  exit
+  
+  member .ReportList     is ARRAY
+  
+exit
+-- End of form definition for !!MTOprintRD
+
+------------------------------------------------------------------------
+--
+-- Method:      MTOprintRD
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .MTOprintRD()
+  
+  !this.paraSap.val = |(released versions only)|
+
+  !this.appendix.settooltip(|Used if a pipe collection is exported to 1 summary file!|)
+  
+--  !this.paraFile1.val = |(multiple sheets)|
+--  !this.paraFile2.val = |(single sheets)|
+  
+  !mtop = object mtoBulkPrintObject()
+  
+  !this.cancelcall = |kill !!MTOprintRD|
+  !this.list.SETHEADINGS('Choose Report Template')
+  
+  
+  if defined(!!lastmtoexportpath) then
+    !this.folder.val = !!lastmtoexportpath
+  else
+    !tar = |%PDMSUSER%\|
+    !file = object file(!tar)
+    !!lastmtoexportpath = !file.fullname()
+    !this.folder.val = !!lastmtoexportpath
+  endif
+  
+  
+  if !!mtoBulkPrint.single then
+    !this.gRadioFile.val = 1
+  else
+    !this.gRadioFile.val = 2
+  endif
+
+  if !!mtoBulkPrint.tty then
+    !this.gRadioMode.val = 2
+  else
+    !this.gRadioMode.val = 1
+  endif
+  
+  !this.pdf.val = !!mtoBulkPrint.pdf
+  !this.xls.val = !!mtoBulkPrint.xls
+  !this.sap.val = !!mtoBulkPrint.sap
+  
+  !this.appendix.val = !!mtoBulkPrint.userfile
+  
+  !this.gRadioFile.callback = |!this.setBulkObject()|
+  !this.gRadioMode.callback = |!this.setBulkObject()|
+  !this.appendix.callback   = |!this.setBulkObject()|
+  !this.pdf.callback   = |!this.setBulkObject()|
+  !this.xls.callback   = |!this.setBulkObject()|
+  !this.sap.callback   = |!this.setBulkObject()|
+  
+  !this.getreports()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      startBrowser
+--
+-- Description: get Report from PMLLIB to List
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setBulkObject()
+  
+  if !this.gRadioFile.val eq 1 then
+    !!mtoBulkPrint.single = TRUE
+  else
+    !!mtoBulkPrint.single = FALSE
+  endif
+  
+  if !this.gRadioMode.val eq 1 then
+    !!mtoBulkPrint.tty = FALSE
+  else
+    !!mtoBulkPrint.tty = TRUE
+  endif
+
+  !!mtoBulkPrint.pdf = !this.pdf.val
+  !!mtoBulkPrint.xls = !this.xls.val
+  !!mtoBulkPrint.sap = !this.sap.val
+  
+  !tmp = !this.appendix.val.trim()
+  
+  !tmp = !tmp.replace(|'|,||)
+  !tmp = !tmp.replace(|"|,||)
+  !tmp = !tmp.replace(|{|,||)
+  !tmp = !tmp.replace(|}|,||)
+  !tmp = !tmp.replace(|[|,||)
+  !tmp = !tmp.replace(|]|,||)
+  !tmp = !tmp.replace(|/|,|-|)
+  !tmp = !tmp.replace(|\|,|-|)
+  !tmp = !tmp.replace(|, |,|,|)
+  !tmp = !tmp.replace(| +|,|+|)
+  !tmp = !tmp.replace(| -|,|-|)
+  !tmp = !tmp.replace(| |,|-|)   
+  !tmp = !tmp.replace(|_#|,||)
+  !tmp = !tmp.replace(|__|,|_|)
+  !tmp = !tmp.replace(| |,|_|)
+  
+  !this.appendix.val = !tmp
+  
+  !!mtoBulkPrint.userfile = !tmp
+  
+endmethod
+------------------------------------------------------------------------
+--
+-- Method:      startBrowser
+--
+-- Description: get Report from PMLLIB to List
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .startBrowser()
+  
+  -- set export path
+  if defined(!!lastmtoexportpath) then
+    !tar = !!lastmtoexportpath
+  else
+    !tar = |%PDMSUSER%\|
+  endif
+  
+  !!fileBrowser('$!tar', 'Reports', 'Target folder', false, '!!MTOprintRD.settarget(!!fileBrowser.file.pathname())')
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getreports
+--
+-- Description: get Report from PMLLIB to List
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getreports()
+  
+  !this.list.clear()
+  
+  var !proj PROJ CODE
+  
+  
+  !projfile = |%| + !proj + |DFLTS%\ini\mto-report-templates.xml|
+  !xmlfile = object file(!projfile)
+  
+  if !xmlfile.exists().not() then
+    !pmlfile = |%PMLLIB%\mtopiping\Reports\mto-report-templates.xml|
+    !xmlfile = object file(!pmlfile)
+    if !xmlfile.exists().not() then
+      !!alert.error(|"mto-report-templates.ini" file not found, no exports possible!|)
+      RETURN
+    endif
+  endif
+  
+  !xmldata = !xmlfile.readfile()
+  
+--  q var !xmldata
+  
+  !this.ReportList.clear()
+  
+  !newObj = false
+  !repObj = object mtoreporttemplate()
+  !dtext = array()
+  
+  do !i index !xmldata
+  
+    !xmlline = !xmldata[$!i].trim().upcase()
+    
+    if !xmlline.matchwild(|<REPORT>*|) then
+      -- start new object
+      !newObj = true
+      !repObj = object mtoreporttemplate()
+    endif
+    
+    if !newObj.not() then
+      SKIP
+    endif
+
+--    q var !xmlline
+    
+    -- add data to object
+    if !xmlline.matchwild(|<NAME>*|) then
+      -- name of dataset
+      !member = |name|
+      !value = !xmlline.after(|<NAME>|).before(|</NAME>|)
+      
+      !repObj.setMember(!member,!value)
+      handle any
+        !mess = !!error.text
+        $P $!mess
+      endhandle
+    endif
+    
+    if !xmlline.matchwild(|<PIPE>*|) then
+      -- Pipe report
+      !member = |PIPErepfil|
+      !value = !xmlline.after(|<PIPE>|).before(|</PIPE>|)
+      
+      !repObj.setMember(!member,!value)
+      handle any
+        !mess = !!error.text
+        $P $!mess
+      endhandle
+    endif
+      
+    if !xmlline.matchwild(|<SUMM>*|) then
+      -- Summary report
+      !member = |SUMMrepfil|
+      !value = !xmlline.after(|<SUMM>|).before(|</SUMM>|)
+      
+      !repObj.setMember(!member,!value)
+      handle any
+        !mess = !!error.text
+        $P $!mess
+      endhandle
+    endif
+      
+    if !xmlline.matchwild(|<SAPPIPE>*|) then
+      -- SAP Pipe report
+      !member = |SAPPIPErepfil|
+      !value = !xmlline.after(|<SAPPIPE>|).before(|</SAPPIPE>|)
+      
+      !repObj.setMember(!member,!value)
+      handle any
+        !mess = !!error.text
+        $P $!mess
+      endhandle
+    endif
+      
+    if !xmlline.matchwild(|<SAPSUMM>*|) then
+      -- SAP Summary report
+      !member = |SAPSUMMrepfil|
+      !value = !xmlline.after(|<SAPSUMM>|).before(|</SAPSUMM>|)
+      
+      !repObj.setMember(!member,!value)
+      handle any
+        !mess = !!error.text
+        $P $!mess
+      endhandle
+    endif
+    
+--    q var !repObj
+    
+    if !xmlline.matchwild(|*</REPORT>|) then
+      -- end report object
+      if !newObj eq TRUE then
+        if !repObj.name eq || then
+          -- no name set, do not add object
+        else
+          -- add object to list
+          !dtext.append(!repObj.name)
+          !this.ReportList.append(!repObj)
+        endif
+      endif
+      !repObj = object mtoreporttemplate()
+      !newObj = false
+    endif
+    
+  enddo
+  
+  !this.list.dtext = !dtext
+  !this.list.rtext = !dtext
+  
+  if defined(!!mtoBulkPrint) then
+    !repname = !!mtoBulkPrint.reports.name
+    !this.list.select( 'dtext',!repname)
+    handle any
+      !this.selectrep()
+    endhandle
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      selectrep
+--
+-- Description: Select report from list, put to repfile member
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .selectrep()
+  
+  !ii = !this.list.val
+  !!mtoBulkPrint.reports = !this.ReportList[$!ii]
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      settarget
+--
+-- Description: run report
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .settarget(!pathin is STRING)
+  
+--  !vers = !!mtoBulkPrint.mtovers
+--  !boms = !!mtoBulkPrint.mtos
+--  if !boms.empty() and !vers.empty() then
+--    !!alert.error(|No BOMs found!|)
+--    kill !!MTOprintRD
+--    RETURN
+--  endif
+  
+  !!lastmtoexportpath = !pathin
+  !this.folder.val = !!lastmtoexportpath
+  
+--  show !!MTOprintRD
+  
+endmethod

@@ -1,0 +1,62 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2023 to Current Year  E&C GmbH
+--
+-- File:            mtogetMTOSRCVALID.pmlfnc
+--   Type:          Function mtogetMTOSRCVALID
+--   Group:         MTO Tool
+--     Keyword:     --
+--   Module:        design
+--   Replaces:      --
+--
+-- Author:          Herbert Zöchling
+-- Created:         Thu Jul 20 2023
+--
+-- Last modified by $Author:  $ on $Date:  $
+--                  $Revision: 1.0 $
+--
+-- Description:
+-- Get ARRAY for NETGRID
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--    
+------------------------------------------------------------------------
+
+-- Define function
+define function !!mtogetMTOSRCVALID(!element is DBREF) is BOOLEAN
+  
+    !tmpce = !!ce
+
+    !return = false
+
+    $!element
+    handle any
+        return !return
+    endhandle
+    :MTOGRP
+    handle any
+        return !return
+    endhandle
+    
+    !mtogrp = !!ce
+
+    $!tmpce
+    handle any
+    endhandle
+
+    !srcHandler = object mtoSourceHandler()
+    
+    !srcHandler.getMTOdefiniton(!mtogrp)
+
+    !return = !srcHandler.same
+
+    return !return
+
+endfunction

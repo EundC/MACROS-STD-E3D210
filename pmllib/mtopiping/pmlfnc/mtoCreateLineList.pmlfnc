@@ -1,0 +1,134 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2022 to Current Year  E&C GmbH
+--
+-- File:            mtoCreateLineList.pmlfnc
+--   Type:          Function mtoCreateLineList
+--   Group:         MTO Tool
+--     Keyword:     --
+--   Module:        design
+--   Replaces:      --
+--
+-- Author:          Herbert Zöchling
+-- Created:         Mon Jul 04 2022
+--
+-- Last modified by $Author:  $ on $Date:  $
+--                  $Revision: 1.0 $
+--
+-- Description:
+-- Create / Update - GPSET with PIPEs for MTOgrp
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--    
+------------------------------------------------------------------------
+
+-- Define function
+define function !!mtoCreateLineList(!mtogrp is DBREF, !pipes is ARRAY)
+  
+  !tmpce = !!ce
+
+  !gpset = =0/0
+  !gpwl = =0/0
+
+  if !mtogrp.isnamed then
+    !gpsetName = !mtogrp.name.replace(|/MTOGRP|,|/LINES|)
+    if !gpsetName.matchwild(|/LINES*|).not() then
+      !gpsetName = |/LINES| + !mtogrp.name
+    endif
+    !gpsetName = !gpsetName.substring(1,50)
+    handle any
+    endhandle
+  else
+    !gpsetName = ||
+  endif
+
+  !refno = !mtogrp.refno.string()
+
+  var !gpsets coll all GPSET with FUNCTION eq !refno and DBWRITE eq TRUE
+  if !gpsets.size() geq 1 then
+    if !gpsets.size() gt 1 then
+      $P More than 1 GPSET found for MTOGRP! Using First found!
+    endif
+    !gpset = !gpsets[1].dbref()
+    !gpwl = !gpset.owner
+  endif
+
+  if !gpset.badref() then
+    -- find gpwl
+    var !gpwls coll all GPWL with DBWRITE eq TRUE and PURPOSE eq |PIPE|
+    if !gpwls.empty().not() then
+      !gpwl = !gpwls[1].dbref()
+    endif
+
+    if !gpwl.badref() then
+      -- create GPWL
+      var !proj PROJ CODE
+      !gpwlname = |/| + !proj + |/LINELISTS|
+      $!mtogrp
+      SITE
+      NEW GPWL
+      handle any
+        !mess = !!error.text
+        $P $!mess
+        return error 1 |Could not create GPWL! - Error: | + !mess
+      endhandle
+      !gpwl = !!ce
+      !gpwl.purp = |PIPE|
+      !gpwl.name = !gpwlname
+      handle any
+      endhandle
+    endif
+
+    $!gpwl
+    NEW GPSET
+    handle any
+      !mess = !!error.text
+      $P $!mess
+      return error 1 |Could not create GPSET! - Error: | + !mess
+    endhandle
+    !gpset = !!ce
+    !gpset.function = !refno
+  endif
+
+  -- set name
+  if !gpsetName neq || then
+    !gpset.name = !gpsetName
+    handle any
+    endhandle
+  endif
+
+  -- delete member
+  do !mem value !gpset.member
+    $!mem
+    delete $!!ce.type
+    handle any
+      return error 1 |Could not delete existing member in GPSET|
+    endhandle
+  enddo
+
+  -- add member
+  do !p value !pipes
+    if !p.acttype neq |PIPE| then
+      skip
+    endif
+    $!gpset
+    GADD $!p
+    handle any
+      !mess = !!error.text
+      $P $!mess
+      return error 1 |Could not create GPITEM! - Error: | + !mess
+    endhandle
+  enddo
+
+  $!tmpce
+  handle any
+  endhandle
+
+endfunction

@@ -1,0 +1,598 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2023 to Current Year EundC GmbH
+--
+-- File:            MTOpipelistViewer.pmlfrm
+--   Type:          Form Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        Design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2023/07/17 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Form for MTO managing 
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+import 'GridControl'
+handle any
+endhandle
+
+-- Define function
+setup form !!MTOpipelistViewer at xr 0.5 yr 0.5 dialog resize
+  
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+
+  -- my .Net control
+  member .pipelistGrid            is NETGRIDCONTROL
+  member .pipelistGridSelection   is ARRAY
+
+  member .mtogrp                  is DBREF
+  member .srcHandler              is mtoSourceHandler
+
+  member .caller                  is STRING
+  member .changeFlag              is BOOLEAN
+
+  frame .frame0 anchor all
+    path down
+    para .mto1  width 8
+    para .mto2  at xmax .mto1 ymin .mto1 width 14
+    para .mto3  at xmax .mto2 ymin .mto1 width 40
+    
+    para .mto4  at xmin .mto1 ymax .mto1 width 40
+
+    button .updall 'LL  ' pixmap hei 32 wid 32 callback |!this.createlinelist()|     anchor R + T at xmax .mto3  ymin .mto3 +0.5
+
+    frame .frame1 'MTO Source - Pipes:' anchor all at xmin .frame0 +0.5 ymax .mto4 +0.25  height 20 width 66
+      container .pipelistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+    exit
+  exit
+  
+exit
+
+------------------------------------------------------------------------
+--
+-- Method:      MTOmanager
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .MTOpipelistViewer()
+  
+  
+  !this.formTitle      = |MTO Source - Pipe list Viewer|
+  !this.initCall       = '!this.getGroupInfo()'
+  !this.formRevision   = ' $Revision: 1.0 $ '
+  !this.cancelCall     = '!this.hideForm()'
+  -- !this.quitCall       = ''
+  -- !this.killingCall    = ''
+
+  !icupll32 =  !!pml.GETPATHNAME(|euclinelist32.png|)
+  !this.updall.addpixmap(!icupll32)
+  !this.updall.settooltip('Create / Update Linelist as GPSET for MTO')
+
+  !this.changeFlag = false
+
+  -- setup netgrid objects
+  !this.setupform()
+
+  -- $P Bin da constructor
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setupform
+--
+-- Description: setup .NET grids (initial)
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setupform()
+  
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  
+  -- setup PIPE list
+  !this.pipelistGrid = object NETGRIDCONTROL()
+  
+  -- Add PML event handlers to .Net control
+  !this.pipelistGrid.addeventhandler('OnPopup', !this, 'setPopUpPIPE')
+  !this.pipelistGrid.addeventhandler('AfterSelectChange', !this, 'dataselectPIPE')
+  --  !this.pipelistGrid.addeventhandler('BeforeCellUpdate', !this, 'dataupdatePIPE')
+  --  !this.pipelistGrid.addeventhandler('BeforeCellActivate', !this, 'dataselectPIPE')
+  --  !this.pipelistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistPIPE')
+  
+  -- Add .Net control to PML container
+  !this.pipelistFrame.control = !this.pipelistGrid.handle()
+  
+   -- configure grid presentation
+  !this.pipelistGrid.editableGrid(FALSE)
+  !this.pipelistGrid.columnExcelFilter(TRUE)
+  !this.pipelistGrid.outlookGroupStyle(FALSE)
+  !this.pipelistGrid.fixedHeaders(FALSE)
+  !this.pipelistGrid.fixedRows(FALSE)
+  !this.pipelistGrid.errorIcon(TRUE)
+  !this.pipelistGrid.clearGrid()
+  !this.pipelistGrid.singlerowselection(FALSE)
+  --  !this.pipelistGrid.singlerowselection(TRUE)
+  !this.pipelistGrid.columnSummaries(FALSE)
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setpopupPIPE
+--
+-- Description: PIPE Popup
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       data
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setpopupPIPE(!a is ARRAY)
+  
+  !menu = !this.newMenu('listPopupPIPE')
+  handle(61,566)
+    !menu = !this.listPopupPIPE
+    !menu.clear()
+  endhandle
+    
+    !menu.add(|callback|, |Navigate To|,     |!this.action('NAV')|)
+    !menu.add(|callback|, |Add to 3D view|,  |!this.action('ADD')|)
+    !menu.add(|separator|)
+    !menu.add(|callback|, |Confirm deleted Pipe|,  |!this.action('CONFIRM')|)
+    !menu.add(|separator|)
+    !menu.add(|callback|, |Export to XLS|,  |!this.Export2Excel()|)
+
+  !this.pipelistGrid.AUTOFITCOLUMNS()
+  
+  !this.pipelistFrame.setPopup(!this.listPopupPIPE)
+  !this.pipelistFrame.showPopup(!a[0], !a[1])
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataselectPIPE
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataselectPIPE(!data is ARRAY)
+  
+  !this.pipelistGridSelection.clear()
+  
+  -- Get selected elements
+  do !rowTag values !data[0]
+    -- !rowIndex = !this.pipelistGrid.GETROWNUMFROMTAG(!rowTag)
+    !item = !this.pipelistGrid.getrow(!rowTag)[1]
+    !element = !item.dbref()
+    handle any
+      -- set row inactive?
+      -- !this.pipelistGrid.SETROWVISIBILITY(!rowIndex, FALSE)
+    endhandle
+    if !element.badref() then
+      !this.pipelistGridSelection.append(!rowTag)
+    else
+      !this.pipelistGridSelection.append(!element)
+    endif
+  enddo
+  
+  !this.pipelistGrid.refreshtable()
+  !this.pipelistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getMTOgroup
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getMTOgroup(!element is DBREF)
+
+  !tmpce = !!ce
+
+  $!element
+  handle any
+    return
+  endhandle
+
+  :MTOGRP
+  handle any
+    return
+  endhandle
+
+  !this.mtogrp = !!ce
+
+  $!tmpce
+
+  !this.getGroupInfo()
+
+  -- get source
+
+  !this.srcHandler = object mtoSourceHandler()
+  !this.srcHandler.getMTOdefiniton(!this.mtogrp)
+
+  !netData = !this.srcHandler.getPipeListForGrid()
+
+  !this.loadDataToGrid(!netData)
+
+  $(
+  if !this.srcHandler.same.not() then
+    !ans = !!alert.confirm(|Source in MTO Definiton is not up to date! Update Source?|)
+    if !ans eq |YES| then
+      !this.srcHandler.updateSourceInDB()
+    endif
+  endif
+  $)
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getMTOgroup
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getGroupInfo()
+
+  if !this.mtogrp.badref() then
+    return
+  endif
+
+  !this.changeFlag = false
+
+  !mtostru = object mtostructure(!this.mtogrp)
+
+  !mtovers = !mtostru.mtolastver
+  if !mtovers.badref() then
+    -- no version existing
+    !mtorev = |-|
+    !mtover = |-|
+    !mtorel = boolean()
+    !mtouser = |nobody|
+    !mtodate = |never|
+  else
+    !mtorev = !mtovers.:MTO-REV
+    !mtover = !mtovers.:MTO-VERS
+    !mtorel = !mtovers.:MTO-RELEASED
+    !mtouser = !mtovers.:MTO-CRE-USER
+    !mtodate = !mtovers.:MTO-CRE-DATE
+  endif
+
+  if !mtorel.unset() then
+    !this.mto1.val = 'New     '
+  elseif !mtorel eq true then
+    !this.mto1.val = 'RELEASED'
+  else
+    !this.mto1.val = 'Version '
+  endif
+  !version =  |Vers.:"| + !mtover.string() + |" - Rev.:"| + !mtorev + |"|
+  
+  !this.mto2.val = !version
+  
+  -- set description on form
+  !this.mto3.val = |Pipe list MTO: | + !this.mtogrp.Description + | // | + !this.mtogrp.Function
+  
+  !info = |Created: | + !mtodate + | // | + !mtouser
+  !this.mto4.val = !info
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:   loadDataToGrid
+--
+-- Description: Put Pipe data into the data grid
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .loadDataToGrid(!netData is ARRAY)
+
+  -- get selected rows
+  !selrows = !this.pipelistGrid.GETSELECTEDROWTAGS()
+  
+  -- Clear any existing data
+  !this.pipelistGrid.clearGrid()
+  !this.pipelistGridSelection.clear()
+  
+  -- Set headings
+  !title = 'PIPES'
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|Pipe|)
+  !headings.append(|Last Ver.|)
+  !headings.append(|Comment|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  !nds = object NETDATASOURCE(!title, !headings, !netData)
+  !this.pipelistGrid.bindToDataSource(!nds)
+  
+  -- hide name and type
+  !this.pipelistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+  
+  -- updategrid icons
+  !this.pipelistGrid.refreshtable()
+  !this.pipelistGrid.autofitcolumns()
+
+  -- update gui (open all groups...)
+  !sz = !this.pipelistGrid.GETNUMBERROWS()
+  do !i from 1 to !sz
+    !this.pipelistGrid.CLEARROWSELECTION()
+    !this.pipelistGrid.SELECTROW($!i)
+    handle any
+    endhandle
+    !this.pipelistGrid.SETROWCOLOR($!i,'white')
+  enddo
+  
+  !this.pipelistGrid.CLEARROWSELECTION()
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      action
+--
+-- Description: add item selection to 3dview
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      GADGET      Frame
+--    2   R      STRING      Action
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .action(!what is STRING)
+  
+  if !what eq |ADD| then
+    do !item value !this.pipelistGridSelection
+      ADD $!item
+      handle any
+      endhandle
+    enddo
+  elseif !what eq |NAV| then
+    $!this.pipelistGridSelection[1]
+    handle any
+    endhandle
+  elseif !what eq |CONFIRM| then
+
+    do !item value !this.pipelistGridSelection
+      
+      if !item.objecttype() eq |DBREF| then
+        skip
+      elseif !item.objecttype() eq |STRING| then
+        !rowtag = !item
+      else
+        $P *** Error in action - OBJECTTYPE not known by PML Code ***
+        skip
+      endif
+      
+      !itemName = !this.pipelistGrid.getrow(!rowTag)[2]
+
+      -- q var !itemName
+
+      do !mem value !this.srcHandler.mtosource.member
+        if !mem.acttype eq |:MTOSRCELE| then
+          if !mem.purpose eq |PIPE| then
+            if !mem.:MTODESLNK.badref() then
+              -- deleted!!
+              if !mem.:MTODESLNKNAME eq !itemName then
+                if !mem.func.matchwild(|* CONFIRMED *|) then
+                  -- already confirmed
+                else
+                  !mem.func = |*** PIPE deleted - CONFIRMED ***|
+                  !this.changeFlag = true
+                endif
+              endif
+            endif
+          endif
+        endif
+      enddo
+
+    enddo
+
+    !this.getMTOgroup(!this.mtogrp)
+
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      createlinelist
+--
+-- Description: Create new MTO version
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .createlinelist()
+  
+  !tmpce = !!ce
+  
+  !errorlog = array()
+  !pipes = !this.srcHandler.getSourcePipesFromDB()
+  
+  -- create update GPSET
+  !!mtoCreateLineList(!this.mtogrp,!pipes)
+  handle any
+    !info = |ERROR - With GPSET creation | + !mtog.name
+    !errorlog.append(!info)
+    !errorlog.append(!info)
+    !errorlog.append(!!error.text)
+    !errorlog.append(!!error.line)
+    !errorlog.appendarray(!!error.callstack)
+    SKIP
+  endhandle
+
+  $!tmpce
+  handle any
+  endhandle
+  
+  if !errorlog.empty() then
+    !!alert.message(|Linelist creation finished - No error detected!|)
+  else
+    !date = object datetime()
+    !datestr = !date.string()
+    !datestr = !datestr.replace(|:|,|-|).replace(| |,|_|)
+    
+    !filename = |%aveva_design_user%\logfile-linelist-| + !datestr + |.txt|
+    !logfile = object file(!filename)
+    !logfile.writefile(|OVER|,!errorlog)
+    
+    SYSCOM 'start $!filename'
+    !!alert.message(|Linelist creation finished - Please check logfile!|)
+  endif
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      hideForm
+--
+-- Description: Create new MTO version
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .hideForm()
+  
+  if defined(!!MTOmanager) and !this.changeflag then
+    !!MTOmanager.loadmtogrps()
+  endif
+
+endmethod
+
+-----------------------------------------------------------------------
+--
+-- Method:      Export2Excel
+--
+-- Description: Create new MTO version
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .Export2Excel()
+
+  if defined(!!mtoLinelistLastPath) then
+    !folder = !!mtoLinelistLastPath
+  else
+    !folder = |%AVEVA_DESIGN_USER%|
+  endif
+
+  !!fileBrowser(!folder, '.xls', 'Save file', false, '')
+  handle any
+    return
+  endhandle
+
+  !file = !!fileBrowser.file.name()
+  handle any
+    return
+  endhandle
+
+  !this.pipelistGrid.SAVEGRIDTOEXCEL(!file)
+  
+  !!mtoLinelistLastPath = !!fileBrowser.file.directory().fullname()
+
+endmethod
+

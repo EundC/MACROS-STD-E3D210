@@ -1,0 +1,2456 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2022 to Current Year EundC GmbH
+--
+-- File:            MTOmanager.pmlfrm
+--   Type:          Form Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        Design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/01 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Form for MTO managing 
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+import 'GridControl'
+handle any
+endhandle
+
+setup form !!MTOmanager at xr 0.25 yr 0.25 DIALOG DOCK
+  
+  title |AVEVA MTO Manager|
+  
+-- Global Instance of PML object used for MTO preview forms:
+  -- !!avevamtoviews
+  
+-- Form members:
+  
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle    
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle    
+  
+  -- .Net control
+  member .mtodefdatalistGrid             is NETGRIDCONTROL
+  member .mtodefdatalistGridSelection    is ARRAY
+
+  member .mtoversdatalistGrid            is NETGRIDCONTROL
+  member .mtoversdatalistGridSelection   is ARRAY
+
+  member .mtosdatalistGrid               is NETGRIDCONTROL
+  member .mtosdatalistGridSelection      is ARRAY
+  
+  -- Stack member
+  member .mtowldloaded                   is ARRAY
+  member .mtoversloaded                  is ARRAY
+  member .mtosloaded                     is ARRAY
+  
+  
+  
+  frame .frame00 anchor all
+    path down
+
+    frame .frame0 tabset at xmin .frame00 + 0.5 ymin .frame00 + 0.0 anchor all
+      
+      frame .frame1 |MTO Definitions|
+        
+        list .mtowlds ':MTOWLDs' anchor L + T + B at xmin .frame1 ymin .frame1 +0.5 MULTI hei 20 width 20
+        
+        button .addmtow pixmap hei 16 wid 16 callback |!this.modmtogrp('add')| anchor L + T  at xmax .mtowlds +1 ymin .mtowlds +2
+        button .remmtow pixmap hei 16 wid 16 callback |!this.modmtogrp('rem')| anchor L + T  at xmin .addmtow    ymax .addmtow +1
+        
+        frame .frame11 'MTO Definitions:' anchor all at xmax .mtowlds +4 ymin .mtowlds height 14 width 90
+          container .mtodefdatalistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+        exit
+        
+        button .newdef 'New ' pixmap hei 32 wid 32 callback |!this.mtodef('NEW')|    anchor R + T at xmax .frame11 +1 ymin .frame11 +1
+        button .copdef 'Copy' pixmap hei 32 wid 32 callback |!this.mtodef('COPY')|   anchor R + T at xmin .newdef  ymax .newdef +0.5
+        button .moddef 'Mod.' pixmap hei 32 wid 32 callback |!this.mtodef('MOD')|    anchor R + T at xmin .newdef  ymax .copdef +0.5
+        button .deldef 'Del.' pixmap hei 32 wid 32 callback |!this.mtodef('DEL')|    anchor R + T at xmin .newdef  ymax .moddef +0.5
+
+        button .updall 'LL  ' pixmap hei 32 wid 32 callback |!this.mtodef('LL')|     anchor R + T at xmin .newdef  ymax .deldef +1.5
+
+      exit
+      
+      frame .frame2 |MTO Versions|
+        frame .frame21 'Selected MTO Definitions:' anchor all at xmin .frame2 ymin .frame2 height 14 width 80
+          container .mtoversdatalistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+        exit
+      exit
+      
+      frame .frame3 |MTOs|
+        frame .frame31 'Selected MTOs:' anchor all at xmin .frame3 ymin .frame3 height 14 width 80
+          container .mtosdatalistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+        exit
+      exit
+      
+    exit
+--    frame .frame3 'Revisionen:' anchor all at xmin .frame2 ymax height 9 width 106
+--      container .netdatalistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+--    exit
+    
+    button .cancel  ' EXIT ' tooltip 'Close Window (Content is lost)'  callback 'kill !!MTOmanager'  at xmin .frame0  ymax .frame0 + 0.5 anchor L + B
+    button .hide    ' HIDE ' tooltip 'Close Window (Content will remain)' callback '!this.hide()'  at xmax .frame0 - size ymin .cancel anchor R + B
+--    toggle .tlrev tagwid 20 'Zeige nur letztgültige Revisonen'   at xmax .cancel +3 ymin .cancel anchor L + B
+  exit
+
+
+exit
+
+handle any
+endhandle
+
+-- End of form definition for !!MTOmanager
+
+------------------------------------------------------------------------
+--
+-- Method:      MTOmanager
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .MTOmanager()
+  
+  !this.cancelcall = |!this.hide()|
+  !this.quitcall = |!this.hide()|
+  !this.killingcall = |!this.kill()|
+  
+  -- setup layout
+  !icrght16   =  !!pml.GETPATHNAME(|rightarrow16.png|)
+  !icleft16   =  !!pml.GETPATHNAME(|leftarrow16.png|)
+  
+  !this.addmtow.addpixmap(!icrght16)
+  !this.remmtow.addpixmap(!icleft16)
+
+  !icnew32  =  !!pml.GETPATHNAME(|avagmbhnew32.png|)
+  !iccopy32 =  !!pml.GETPATHNAME(|avagmbhcopy32.png|)
+  !icedit32 =  !!pml.GETPATHNAME(|avagmbhedit32.png|)
+  !icdele32 =  !!pml.GETPATHNAME(|avagmbhdelete32.png|)
+  !icupll32 =  !!pml.GETPATHNAME(|euclinelist32.png|)
+
+  !this.newdef.addpixmap(!icnew32)
+  !this.copdef.addpixmap(!iccopy32)
+  !this.moddef.addpixmap(!icedit32)
+  !this.deldef.addpixmap(!icdele32)
+  !this.updall.addpixmap(!icupll32)
+
+  !this.newdef.settooltip('Create new MTO definition')
+  !this.copdef.settooltip(|Copy MTO definition - Definition ONLY. Existing MTOs won't be copied|)
+  !this.moddef.settooltip('Modify MTO definition')
+  !this.deldef.settooltip('Delete MTO definition - Including exitsing MTOs!!')
+  !this.updall.settooltip('Create / Update Linelist as GPSET for MTO')
+  
+  -- load data
+  !this.loadmtowlds()
+  
+  -- setup netgrid objects
+  !this.setupform()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadmtowlds
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadmtowlds()
+  
+  var !a coll all SITE with acttype eq |:MTOWLD|
+  !b = array()
+
+  $P Check / Repair Source Links & Pipe MTO Links - Run Migration to latest MTO version...
+  
+  do !i index !a
+    !dbele = !a[$!i].dbref()
+    if !dbele.isnamed then
+      !b[$!i] = !dbele.namn
+    else
+      !b[$!i] = |:MTOWLD | + !dbele.tysequ.string(|D0|)
+    endif
+    
+    -- check links
+    !!mtoCheckLinksByName(!dbele)
+    handle any
+    endhandle
+
+    -- run migration?
+    !!mtoSourceUpgrade(!dbele)
+    handle any
+    endhandle
+
+  enddo
+  
+  !this.mtowlds.dtext = !b
+  !this.mtowlds.rtext = !a
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      kill
+--
+-- Description: kill form & prev
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      What will updated
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .kill()
+  
+--  !!mtoviews.closeAll()
+--  handle any
+--  endhandle
+  
+--  kill !!MTOmanager
+--  handle any
+--  endhandle
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      hide
+--
+-- Description: kill form & prev
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      What will updated
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .hide()
+  
+  hide !!MTOmanager
+  
+  !!mtoviews.showAll()
+  handle any
+  endhandle
+  
+  
+endmethod
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+-- START .NET GRID HANDLING
+--
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+--
+-- Method:      setupform
+--
+-- Description: setup .NET grids (initial)
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setupform()
+  
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  
+  -- setup MTOGRP list
+  !this.mtodefdatalistGrid = object NETGRIDCONTROL()
+  
+  -- Add PML event handlers to .Net control
+  !this.mtodefdatalistGrid.addeventhandler('OnPopup', !this, 'setPopUpMTOGRP')
+  !this.mtodefdatalistGrid.addeventhandler('AfterSelectChange', !this, 'dataselectMTOGRP')
+--  !this.mtodefdatalistGrid.addeventhandler('BeforeCellUpdate', !this, 'dataupdateMTOGRP')
+--  !this.mtodefdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'dataselectMTOGRP')
+--  !this.mtodefdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistMTOGRP')
+  
+  -- Add .Net control to PML container
+  !this.mtodefdatalistFrame.control = !this.mtodefdatalistGrid.handle()
+  
+   -- configure grid presentation
+  !this.mtodefdatalistGrid.editableGrid(FALSE)
+  !this.mtodefdatalistGrid.columnExcelFilter(TRUE)
+  !this.mtodefdatalistGrid.outlookGroupStyle(TRUE)
+  !this.mtodefdatalistGrid.fixedHeaders(FALSE)
+  !this.mtodefdatalistGrid.fixedRows(FALSE)
+  !this.mtodefdatalistGrid.errorIcon(TRUE)
+  !this.mtodefdatalistGrid.clearGrid()
+  !this.mtodefdatalistGrid.singlerowselection(FALSE)
+--  !this.mtodefdatalistGrid.singlerowselection(TRUE)
+  !this.mtodefdatalistGrid.columnSummaries(FALSE)
+  
+  
+  
+  -- setup MTOVERS list
+  !this.mtoversdatalistGrid = object NETGRIDCONTROL()
+  
+  -- Add PML event handlers to .Net control
+  !this.mtoversdatalistGrid.addeventhandler('OnPopup', !this, 'setPopUpMTOVERS')
+  !this.mtoversdatalistGrid.addeventhandler('AfterSelectChange', !this, 'dataselectMTOVERS')
+--  !this.mtoversdatalistGrid.addeventhandler('BeforeCellUpdate', !this, 'dataupdateMTOVERS')
+--  !this.mtoversdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'dataselectMTOVERS')
+--  !this.mtoversdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistMTOVERS')
+  
+  -- Add .Net control to PML container
+  !this.mtoversdatalistFrame.control = !this.mtoversdatalistGrid.handle()
+  
+   -- configure grid presentation
+  !this.mtoversdatalistGrid.editableGrid(FALSE)
+  !this.mtoversdatalistGrid.columnExcelFilter(TRUE)
+  !this.mtoversdatalistGrid.outlookGroupStyle(TRUE)
+  !this.mtoversdatalistGrid.fixedHeaders(FALSE)
+  !this.mtoversdatalistGrid.fixedRows(FALSE)
+  !this.mtoversdatalistGrid.errorIcon(TRUE)
+  !this.mtoversdatalistGrid.clearGrid()
+  !this.mtoversdatalistGrid.singlerowselection(FALSE)
+--  !this.mtoversdatalistGrid.singlerowselection(TRUE)
+  !this.mtoversdatalistGrid.columnSummaries(FALSE)
+  
+  
+  
+  -- setup MTOS list
+  !this.mtosdatalistGrid = object NETGRIDCONTROL()
+  
+  -- Add PML event handlers to .Net control
+  !this.mtosdatalistGrid.addeventhandler('OnPopup', !this, 'setPopUpMTOS')
+  !this.mtosdatalistGrid.addeventhandler('AfterSelectChange', !this, 'dataselectMTOS')
+--  !this.mtosdatalistGrid.addeventhandler('BeforeCellUpdate', !this, 'dataupdateMTOS')
+--  !this.mtosdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'dataselectMTOS')
+--  !this.mtosdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistMTOS')
+  
+  -- Add .Net control to PML container
+  !this.mtosdatalistFrame.control = !this.mtosdatalistGrid.handle()
+  
+   -- configure grid presentation
+  !this.mtosdatalistGrid.editableGrid(FALSE)
+  !this.mtosdatalistGrid.columnExcelFilter(TRUE)
+  !this.mtosdatalistGrid.outlookGroupStyle(TRUE)
+  !this.mtosdatalistGrid.fixedHeaders(FALSE)
+  !this.mtosdatalistGrid.fixedRows(FALSE)
+  !this.mtosdatalistGrid.errorIcon(TRUE)
+  !this.mtosdatalistGrid.clearGrid()
+  !this.mtosdatalistGrid.singlerowselection(FALSE)
+--  !this.mtosdatalistGrid.singlerowselection(TRUE)
+  !this.mtosdatalistGrid.columnSummaries(FALSE)
+  
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setpopupMTOGRP
+--
+-- Description: MTOGRP Popup
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       data
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setpopupMTOGRP(!a is ARRAY)
+  
+  !menu = !this.newMenu('listPopupMTOGRP')
+    handle(61,566)
+      !menu = !this.listPopupMTOGRP
+      !menu.clear()
+    endhandle
+    
+--    !menu.add(|menu|,     |Select (Add)|,          |selmenuA|, |selmenuA|)
+--    !menu.add(|menu|,     |Select (Only)|,         |selmenuO|, |selmenuO|)
+    !menu.add(|menu|,     |Select|,         |selmenuO|, |selmenuO|)
+    !menu.add(|separator|)
+    !menu.add(|menu|,     |Export|,       |printmenu|, |printmenu|)
+    !menu.add(|callback|, |Open MTO Pipe Viewer|,        |!this.openpipeviewer('MTOGRP')|)
+    !menu.add(|separator|)
+    !menu.add(|callback|, |Create NEW Version (MTO Run)|,  |!this.createnewversion('MTOGRP')|)
+    !menu.add(|separator|)
+    !menu.add(|callback|, |Release LATEST Version|,        |!this.releaseLatest('MTOGRP')|)
+    !menu.add(|separator|)
+    !menu.add(|callback|, |Delete unused Versions|,        |!this.delununsedvers()|)
+    
+    -- select menu
+      !menu = !this.newMenu('selmenuA')
+        handle(61,566)
+          !menu = !this.selmenuA
+          !menu.clear()
+        endhandle
+        !menu.add(|callback|, |LATEST Version|,       |!this.setversion('addlastver')|)
+        !menu.add(|callback|, |LATEST Revision|,      |!this.setversion('addlastrev')|)
+        !menu.add(|separator|)
+        !menu.add(|callback|, |ALL Versions|,         |!this.setversion('addallver')|)
+      
+    -- de-select menu
+      !menu = !this.newMenu('selmenuO')
+        handle(61,566)
+          !menu = !this.selmenuO
+          !menu.clear()
+        endhandle
+        !menu.add(|callback|, |LATEST Version|,       |!this.setversion('onlylastver')|)
+        !menu.add(|callback|, |LATEST Revision|,      |!this.setversion('onlylastrev')|)
+        !menu.add(|separator|)
+        !menu.add(|callback|, |ALL Versions|,         |!this.setversion('onlyallver')|)
+      
+    -- print menu
+      !menu = !this.newMenu('printmenu')
+        handle(61,566)
+          !menu = !this.printmenu
+          !menu.clear()
+        endhandle
+        !menu.add(|callback|, |LATEST Version|,       |!this.printmtos(|)
+        !menu.add(|callback|, |LATEST Revision|,      |!this.printmtos(|)
+
+  
+  !this.mtodefdatalistGrid.AUTOFITCOLUMNS()
+  
+  !this.mtodefdatalistFrame.setPopup(!this.listPopupMTOGRP)
+  !this.mtodefdatalistFrame.showPopup(!a[0], !a[1])
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataselectMTOGRP
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataselectMTOGRP(!data is ARRAY)
+  
+  -- Initialise data
+  !this.mtodefdatalistGridSelection.clear()
+  
+  -- Get selected elements
+  do !rowTag values !data[0]
+    !rowIndex = !this.mtodefdatalistGrid.GETROWNUMFROMTAG(!rowTag)
+    !item = !this.mtodefdatalistGrid.getrow(!rowTag)[1]
+    !element = !item.dbref()
+    handle any
+      -- set row inactive?
+      !this.mtodefdatalistGrid.SETROWVISIBILITY(!rowIndex, FALSE)
+      SKIP
+    endhandle
+    !this.mtodefdatalistGridSelection.append(!element)
+  enddo
+  
+  !this.mtodefdatalistGrid.refreshtable()
+  !this.mtodefdatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setpopupMTOVERS
+--
+-- Description: MTOVERS Popup
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       data
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setpopupMTOVERS(!a is ARRAY)
+  
+  !this.mtoversdatalistGridSelection.clear()
+  do !sel value !a[2]
+    !ele = !sel.dbref()
+    handle any
+      SKIP
+    endhandle
+    !this.mtoversdatalistGridSelection.append(!ele)
+  enddo
+  
+  !menu = !this.newMenu('listPopupMTOVERS')
+    handle(61,566)
+      !menu = !this.listPopupMTOVERS
+      !menu.clear()
+    endhandle
+
+--    !menu.add(|menu|,     |Select (Add)|,    |selmenuverA|,   |selmenuverA|)
+--    !menu.add(|menu|,     |Select (Only)|,   |selmenuverO|,   |selmenuverO|)
+    !menu.add(|menu|,     |Select|,   |selmenuverO|,   |selmenuverO|)
+    !menu.add(|separator|)
+    !menu.add(|menu|,     |Export|,           |printmenuver|, |printmenuver|)
+    !menu.add(|separator|)
+    !menu.add(|callback|, |Create NEW Version (MTO Run)|,  |!this.createnewversion('MTOVERS')|)
+    !menu.add(|separator|)
+    !menu.add(|callback|, |Release Version (Latest only)|, |!this.releaseLatest('MTOVERS')|)
+      
+    -- select menu
+      !menu = !this.newMenu('selmenuverA')
+        handle(61,566)
+          !menu = !this.selmenuverA
+          !menu.clear()
+        endhandle
+        !menu.add(|callback|, |Summary MTOs|,     |!this.setmto('addsummmto')|)
+        !menu.add(|callback|, |Pipe MTOs|,        |!this.setmto('addpipemto')|)
+        !menu.add(|separator|)
+        !menu.add(|callback|, |ALL MTOs|,         |!this.setmto('addallmto')|)
+      
+    -- de-select menu
+      !menu = !this.newMenu('selmenuverO')
+        handle(61,566)
+          !menu = !this.selmenuverO
+          !menu.clear()
+        endhandle
+        !menu.add(|callback|, |Summary MTOs|,     |!this.setmto('onlysummmto')|)
+        !menu.add(|callback|, |Pipe MTOs|,        |!this.setmto('onlypipemto')|)
+        !menu.add(|separator|)
+        !menu.add(|callback|, |ALL MTOs|,         |!this.setmto('onlyallmto')|)
+      
+    -- print menu
+      !menu = !this.newMenu('printmenuver')
+        handle(61,566)
+          !menu = !this.printmenuver
+          !menu.clear()
+        endhandle
+        !menu.add(|callback|, |Summary MTOs|,       |!this.printmtos(|)
+        !menu.add(|callback|, |Pipe MTOs|,          |!this.printmtos(|)
+        !menu.add(|separator|)
+        !menu.add(|callback|, |ALL MTOs|,           |!this.printmtos(|)
+
+  
+  !this.mtoversdatalistGrid.AUTOFITCOLUMNS()
+  
+  !this.mtoversdatalistFrame.setPopup(!this.listPopupMTOVERS)
+  !this.mtoversdatalistFrame.showPopup(!a[0], !a[1])
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataselectMTOVERS
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataselectMTOVERS(!data is ARRAY)
+  
+  -- Initialise data
+  !this.mtoversdatalistGridSelection.clear()
+
+  if !data[0].objecttype() eq |STRING| then
+    !element = !data[0].dbref()
+    !this.mtoversdatalistGridSelection.append(!element)
+  else
+    
+    -- Get selected elements
+    do !item values !data[0]
+      !element = !item.dbref()
+      !this.mtoversdatalistGridSelection.append(!element)
+    enddo
+    
+  endif
+  
+  !this.mtoversdatalistGrid.refreshtable()
+  !this.mtoversdatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setpopupMTOS
+--
+-- Description: MTOS Popup
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       data
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setpopupMTOS(!a is ARRAY)
+  
+--  !this.mtosdatalistGridSelection = !a[2]
+  !this.mtosdatalistGridSelection.clear()
+  do !sel value !a[2]
+    !ele = !sel.dbref()
+    handle any
+      SKIP
+    endhandle
+    !this.mtosdatalistGridSelection.append(!ele)
+  enddo
+  
+  !menu = !this.newMenu('listPopupMTOS')
+    handle(61,566)
+      !menu = !this.listPopupMTOS
+      !menu.clear()
+    endhandle
+
+    !menu.add(|callback|, |Open with MTO viewer|,   |!this.openpreviews(false)|)
+    !menu.add(|callback|, |Open with MTO viewer - New Units|,   |!this.openpreviews(true)|)
+    !menu.add(|separator|)
+    !menu.add(|callback|, |Export MTO(s)|,           |!this.printmtos(|)
+    !menu.add(|separator|)
+     !menu.add(|callback|, |Set as collection and list|,      |!this.setmydata()|)
+  
+  !this.mtosdatalistGrid.AUTOFITCOLUMNS()
+  
+  !this.mtosdatalistFrame.setPopup(!this.listPopupMTOS)
+  !this.mtosdatalistFrame.showPopup(!a[0], !a[1])
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataselectMTOS
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataselectMTOS(!data is ARRAY)
+  
+  -- Initialise data
+  !this.mtosdatalistGridSelection.clear()
+
+  if !data[0].objecttype() eq |STRING| then
+    !element = !data[0].dbref()
+    !this.mtosdatalistGridSelection.append(!element)
+  else
+    
+    -- Get selected elements
+    do !item values !data[0]
+      !element = !item.dbref()
+      !this.mtosdatalistGridSelection.append(!element)
+    enddo
+    
+  endif
+  
+  !this.mtosdatalistGrid.refreshtable()
+  !this.mtosdatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+-- END .NET HANDLING
+--
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+--
+-- Method:      modmtogrp
+--
+-- Description: Add / Remove :MTOGRP for selected :MTOWLDs
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      Add / Rem
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .modmtogrp(!action is STRING)
+  
+  !mtogrps = array()
+  !ind = !this.mtowlds.val
+  
+  do !i value !ind
+    var !a coll all ZONE with acttype eq |:MTOGRP| for $!this.mtowlds.rtext[$!i]
+    !mtogrps.appendarray(!a)
+  enddo
+  
+  if !action.lowcase() eq |add| then
+    !this.mtowldloaded.appendarray(!mtogrps)
+  else
+    !diff = !this.mtowldloaded.difference(!mtogrps)
+    !this.mtowldloaded = !diff
+  endif
+  
+  !this.mtowldloaded.sortunique()
+  
+--  !chk = !this.mtowldloaded.size()
+--  $P $!chk - MTOGRPs found!
+  
+  !this.loadmtogrps()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:   loadmtogrps
+--
+-- Description: Put MTOGRPs into the data grid
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .loadmtogrps()
+
+  -- get selected rows
+  !selrows = !this.MTODEFDATALISTGRID.GETSELECTEDROWTAGS()
+  
+  -- Clear any existing data
+  !this.mtodefdatalistGrid.clearGrid()
+  !this.mtodefdatalistGridSelection.clear()
+  
+  -- Set headings
+  !title = ':MTODEF'
+  !attributes = array()
+  !attributes.append(|REFNO|)
+  
+  !attributes.append(|NAMN of OWNER|)
+  -- !attributes.append(|MCOUNT|)
+  !attributes.append(|PML LASTMTOVERSION|)
+  !attributes.append(|PML MTOSRCVALID|)
+  !attributes.append(|Desc|)
+  !attributes.append(|Func|)
+  !attributes.append(|:MTO-BY-PIPE|)
+  !attributes.append(|:MTO-PIPE-SORTHIER|)
+  !attributes.append(|:MTO-SUMM|)
+  !attributes.append(|:MTO-BY-SPEC|)
+  !attributes.append(|:MTO-USEMTOFLAGS|)
+  !attributes.append(|:MTO-INCLUDEBOLTS|)
+  !attributes.append(|:MTO-ADDBENDS|)
+  !attributes.append(|:MTO-ADDWELD|)
+  !attributes.append(|:MTO-ADDATTA|)
+  !attributes.append(|:MTO-FTUBUIDS|)
+  --  !attributes.append(|:MTO-KEEP-DEL|)
+  --  !attributes.append(|:MTO-UNIT-FILE|)
+  !attributes.append(|:MTO-CONFIGLINK|)
+
+  
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|MTOWLD|)
+  !headings.append(|Versions|)
+  !headings.append(|Source OK|)
+  !headings.append(|Description|)
+  !headings.append(|Prefix|)
+  !headings.append(|PIPE MTO|)
+  !headings.append(|P-MTO by hier|)
+  !headings.append(|Summary MTO|)
+  !headings.append(|MTO per SPEC|)
+  !headings.append(|MTOC,...|)
+  !headings.append(|Bolting|)
+  !headings.append(|Addup BENDs|)
+  !headings.append(|WELDs|)
+  !headings.append(|ATTAs|)
+  !headings.append(|FTUB UID|)
+--  !headings.append(|Keep deleted|)
+  !headings.append(|Config|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  !mtowldData = !!mtoGetNetGridArray(!attributes, !this.mtowldloaded)
+  
+  -- Get revisions
+  !nds = object NETDATASOURCE(!title, !headings, !mtowldData)
+  !this.mtodefdatalistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.mtodefdatalistGrid.autofitcolumns()
+  -- hide name and type
+  !this.mtodefdatalistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+  !this.mtodefdatalistGrid.SETGROUPBYCOLUMN(2,TRUE)
+  
+  
+  -- updategrid icons
+
+  !this.mtodefdatalistGrid.refreshtable()
+  !this.mtodefdatalistGrid.autofitcolumns()
+  
+  -- change TRUE / FALSE to icons
+  !header = !this.mtodefdatalistGrid.GetTitles()
+  !rows = !this.mtodefdatalistGrid.GetRows()
+  
+  !true = !!pml.GETPATHNAME(|valid12.png|)
+  !false = !!pml.GETPATHNAME(|exclamation16x16.png|)
+  
+  do !r index !rows
+    do !i index !rows[$!r]
+      
+      !val = !rows[$!r][$!i].string().lowcase().trim()
+      
+      if !val eq |true| then
+        !info = !header[$!i] + |: | + !val.upcase() 
+        !this.mtodefdatalistGrid.setCellImage(!r,!i,!true)
+        !this.mtodefdatalistGrid.setcellColor(!r,!i,|white|)
+        !this.mtodefdatalistGrid.setCellTooltip(!r,!i,!info)
+        -- !this.mtodefdatalistGrid.setCellValue(!r,!i,||)
+      endif
+      
+      if !val eq |false| then
+        !info = !header[$!i] + |: | + !val.upcase() 
+        !this.mtodefdatalistGrid.setCellImage(!r,!i,!false)
+        !this.mtodefdatalistGrid.setcellColor(!r,!i,|white|)
+        !this.mtodefdatalistGrid.setCellTooltip(!r,!i,!info)
+        -- !this.mtodefdatalistGrid.setCellValue(!r,!i,||)
+      endif
+      
+    enddo
+  enddo      
+  
+  !this.mtodefdatalistGrid.AUTOFITCOLUMNS()
+
+  -- show frame
+  !this.frame1.visible = true
+  !this.frame1.selected = true
+  
+  -- update gui (open all groups...)
+  !sz = !this.MTODEFDATALISTGRID.GETNUMBERROWS()
+  do !i from 1 to !sz
+    !this.MTODEFDATALISTGRID.CLEARROWSELECTION()
+    !this.MTODEFDATALISTGRID.SELECTROW($!i)
+    handle any
+    endhandle
+    !this.MTODEFDATALISTGRID.SETROWCOLOR($!i,'white')
+  enddo
+  
+  !this.MTODEFDATALISTGRID.CLEARROWSELECTION()
+  
+  !this.MTODEFDATALISTGRID.SETSELECTEDROWTAGS(!selrows)
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   loadmtovers
+--
+-- Description: Put MTOVERS into the data grid
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .loadmtovers()
+
+  -- get selected rows
+  !selrows = !this.MTOVERSDATALISTGRID.GETSELECTEDROWTAGS()
+  
+  -- Clear any existing data
+  !this.mtoversdatalistGrid.clearGrid()
+  handle any
+  endhandle
+  !this.mtoversdatalistGridSelection.clear()
+  
+  -- Set headings
+  !title = ':MTOVERS'
+  !attributes = array()
+  !attributes.append(|REFNO|)
+  !attributes.append(|OWNER|)
+  !attributes.append(|Description of OWNER|)
+  !attributes.append(|Function of OWNER|)
+  !attributes.append(|:MTO-REV|)
+  !attributes.append(|:MTO-VERS|)
+--  !attributes.append(|MCOUNT|)
+  !attributes.append(|TYSEQU of LAST :MTOPIPE|)
+  !attributes.append(|TYSEQU of LAST :MTOSUMM|)
+  !attributes.append(|:MTO-REV-LATEST|)
+  !attributes.append(|:MTO-VERS-LATEST|)
+  !attributes.append(|:MTO-RELEASED|)
+  !attributes.append(|:MTO-CRE-USER|)
+  !attributes.append(|:MTO-CRE-DATE|)
+  
+  
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|MTOGRP|)
+  !headings.append(|Desc. Def.|)
+  !headings.append(|Func. Def.|)
+  !headings.append(|Revision|)
+  !headings.append(|Version|)
+--  !headings.append(|MTO Count|)
+  !headings.append(|Pipe MTOs|)
+  !headings.append(|Summ MTOs|)
+  !headings.append(|Latest Rev.|)
+  !headings.append(|Latest Ver.|)
+  !headings.append(|Released|)
+  !headings.append(|User|)
+  !headings.append(|Date|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  
+  -- Get Versions
+  !nds = object NETDATASOURCE(!title, !attributes, !headings, !this.mtoversloaded)
+  !this.mtoversdatalistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.mtoversdatalistGrid.autofitcolumns()
+  -- hide name and type
+  !this.mtoversdatalistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+  !this.mtoversdatalistGrid.SETGROUPBYCOLUMN(2,TRUE)
+  !this.mtoversdatalistGrid.SETGROUPBYCOLUMN(5,TRUE)
+  
+  
+  -- updategrid icons
+
+  !this.mtoversdatalistGrid.refreshtable()
+  !this.mtoversdatalistGrid.autofitcolumns()
+  
+  -- change TRUE / FALSE to icons
+  !header = !this.mtoversdatalistGrid.GetTitles()
+  !rows = !this.mtoversdatalistGrid.GetRows()
+  
+  !true = !!pml.GETPATHNAME(|valid12.png|)
+  !false = !!pml.GETPATHNAME(|exclamation16x16.png|)
+  
+  do !r index !rows
+    do !i index !rows[$!r]
+      
+      !val = !rows[$!r][$!i].string().lowcase().trim()
+      
+      if !val eq |true| then
+        !info = !header[$!i] + |: | + !val.upcase() 
+        !this.mtoversdatalistGrid.setCellImage(!r,!i,!true)
+        !this.mtoversdatalistGrid.setcellColor(!r,!i,|white|)
+        !this.mtoversdatalistGrid.setCellTooltip(!r,!i,!info)
+        -- !this.mtoversdatalistGrid.setCellValue(!r,!i,||)
+      endif
+      
+      if !val eq |false| then
+        !info = !header[$!i] + |: | + !val.upcase() 
+        !this.mtoversdatalistGrid.setCellImage(!r,!i,!false)
+        !this.mtoversdatalistGrid.setcellColor(!r,!i,|white|)
+        !this.mtoversdatalistGrid.setCellTooltip(!r,!i,!info)
+        -- !this.mtoversdatalistGrid.setCellValue(!r,!i,||)
+      endif
+      
+    enddo
+  enddo      
+  
+  !this.mtoversdatalistGrid.AUTOFITCOLUMNS()
+
+  -- show frame
+  !this.frame2.visible = true
+  !this.frame2.selected = true
+  
+  -- update gui (open all groups...)
+  !sz = !this.MTOVERSDATALISTGRID.GETNUMBERROWS()
+  do !i from 1 to !sz
+    !this.MTOVERSDATALISTGRID.CLEARROWSELECTION()
+    !this.MTOVERSDATALISTGRID.SELECTROW($!i)
+    handle any
+    endhandle
+    !this.MTOVERSDATALISTGRID.SETROWCOLOR($!i,'white')
+  enddo
+  
+  !this.MTOVERSDATALISTGRID.CLEARROWSELECTION()
+  
+  !this.MTOVERSDATALISTGRID.SETSELECTEDROWTAGS(!selrows)
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   loadmtos
+--
+-- Description: Put MTOPIPE & MTOSUMM into the data grid
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .loadmtos()
+  
+  -- get selected rows
+  !selrows = !this.MTOSDATALISTGRID.GETSELECTEDROWTAGS()
+  
+  -- Clear any existing data
+  !this.mtosdatalistGrid.clearGrid()
+  handle any
+  endhandle
+  !this.mtosdatalistGridSelection.clear()
+  
+  -- Set headings
+  !title = ':MTOS'
+  !attributes = array()
+  !attributes.append(|REFNO|)
+  !attributes.append(|OWNER of OWNER|)
+  !attributes.append(|NAMN of OWNER|)
+  !attributes.append(|ACTTYPE|)
+  !attributes.append(|:MTO-REV of OWNER|)
+  !attributes.append(|:MTO-REV-LATEST of OWNER|)
+  !attributes.append(|:MTO-VERS-LATEST of OWNER|)
+  !attributes.append(|:MTO-RELEASED of OWNER|)
+  !attributes.append(|Description|)
+  !attributes.append(|NOT(BADREF(:MTODESLNK)) OR NOT(BADREF(:MTO-SPREF))|)
+--  !attributes.append(|:MTODESLNKNAME|)
+  !attributes.append(|IFT(ACTTYPE eq ':MTOPIPE', :MTODESLNKNAME, NAMN of :MTO-SPREF)|)
+  !attributes.append(|:MTO-PIPE-REV|)
+--  !attributes.append(|NAMN of :MTO-SPREF|)
+  
+  
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|MTOGRP|)
+  !headings.append(|MTO Version|)
+  !headings.append(|MTO Type|)
+  !headings.append(|Revision|)
+  !headings.append(|Latest Rev.|)
+  !headings.append(|Latest Ver.|)
+  !headings.append(|Released|)
+  !headings.append(|MTO Description|)
+  !headings.append(|Linked|)
+  !headings.append(|Linked with|)
+  !headings.append(|Sub MTO Rev|)
+--  !headings.append(|Spec|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  
+  -- Get Versions
+  !nds = object NETDATASOURCE(!title, !attributes, !headings, !this.mtosloaded)
+  !this.mtosdatalistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.mtosdatalistGrid.autofitcolumns()
+  -- hide name and type
+  !this.mtosdatalistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+  !this.mtosdatalistGrid.SETGROUPBYCOLUMN(2,TRUE)
+  !this.mtosdatalistGrid.SETGROUPBYCOLUMN(3,TRUE)
+  !this.mtosdatalistGrid.SETGROUPBYCOLUMN(4,TRUE)
+  
+  
+  -- updategrid icons
+
+  !this.mtosdatalistGrid.refreshtable()
+  !this.mtosdatalistGrid.autofitcolumns()
+  
+  -- change TRUE / FALSE to icons
+  !header = !this.mtosdatalistGrid.GetTitles()
+  !rows = !this.mtosdatalistGrid.GetRows()
+  
+  !true = !!pml.GETPATHNAME(|valid12.png|)
+  !false = !!pml.GETPATHNAME(|exclamation16x16.png|)
+  
+  do !r index !rows
+    do !i index !rows[$!r]
+      
+      !val = !rows[$!r][$!i].string().lowcase().trim()
+      
+      if !val eq |true| then
+        !info = !header[$!i] + |: | + !val.upcase() 
+        !this.mtosdatalistGrid.setCellImage(!r,!i,!true)
+        !this.mtosdatalistGrid.setcellColor(!r,!i,|white|)
+        !this.mtosdatalistGrid.setCellTooltip(!r,!i,!info)
+        -- !this.mtosdatalistGrid.setCellValue(!r,!i,||)
+      endif
+      
+      if !val eq |false| then
+        !info = !header[$!i] + |: | + !val.upcase() 
+        !this.mtosdatalistGrid.setCellImage(!r,!i,!false)
+        !this.mtosdatalistGrid.setcellColor(!r,!i,|white|)
+        !this.mtosdatalistGrid.setCellTooltip(!r,!i,!info)
+        -- !this.mtosdatalistGrid.setCellValue(!r,!i,||)
+      endif
+      
+    enddo
+  enddo      
+  
+  !this.mtosdatalistGrid.AUTOFITCOLUMNS()
+  
+  -- show frame
+  !this.frame3.visible = true
+  !this.frame3.selected = true
+  
+  -- update gui (open all groups...)
+  !sz = !this.MTOSDATALISTGRID.GETNUMBERROWS()
+  do !i from 1 to !sz
+    !this.MTOSDATALISTGRID.SETROWCOLOR($!i,'white')
+  enddo
+  !this.MTOSDATALISTGRID.CLEARROWSELECTION()
+  !this.MTOSDATALISTGRID.SELECTROW($!sz)
+  handle any
+  endhandle
+  !this.MTOSDATALISTGRID.CLEARROWSELECTION()
+  
+  !this.MTOSDATALISTGRID.SELECTROW(1)
+  handle any
+  endhandle
+  !this.MTOSDATALISTGRID.CLEARROWSELECTION()
+  
+  !this.MTOSDATALISTGRID.SETSELECTEDROWTAGS(!selrows)
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   mtodef
+--
+-- Description: Create, Copy, Modify MTO Defintion
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .mtodef(!action is STRING)
+  
+  !tmpce = !!ce
+  
+  -- try to find MTOWLD
+  !sel = !this.mtodefdatalistGridSelection
+  !mtowld = =0/0
+
+  !ind = !this.mtowlds.val
+  !i = !ind[1]
+  handle any
+    if !sel.empty().not() then
+      !mtowld = !sel[1].owner
+    endif
+  elsehandle none
+    !mtowld = !this.mtowlds.rtext[$!i].dbref()
+  endhandle
+  
+  -- check mtowld
+  if !action.lowcase() eq |new| or !action.lowcase() eq |copy| then
+
+    if !action.lowcase() eq |copy| then
+      if !sel.empty() then
+        RETURN
+      endif
+    endif
+    
+    if !mtowld.badref() then
+      !!alert.error(|Please select a :MTOWLD or :MTOGRP in this form to defined a target :MTOWLD!|)
+      RETURN
+    else
+      !quest = |Create NEW :MTOGRP (MTO Definition) in :MTOWLD "| + !mtowld.name + |" ?|
+      !ans = !!alert.confirm(!quest)
+      if !ans neq |YES| then
+        RETURN
+      endif
+    endif
+  endif
+  
+  -- perform actions
+  if !action.lowcase() eq |new| then
+    
+    $!mtowld
+    NEW :MTOGRP
+    !this.mtowldloaded.append(!!ce.string())
+    :MTO-BY-PIPE FALSE
+    :MTO-PIPE-SORTHIER FALSE
+    :MTO-FTUBUIDS FALSE
+    :MTO-ADDWELD FALSE
+    
+    
+    !!MTOmodifiyDef(!!ce,TRUE)
+    
+  elseif !action.lowcase() eq |copy| then
+
+    if !sel.empty() then
+      RETURN
+    endif
+    
+    $!mtowld
+    do !i index !sel
+      NEW :MTOGRP
+      !this.mtowldloaded.append(!!ce.string())
+      !target = !!ce
+      !source = !sel[$!i]
+      
+      !target.Description        = |Copy-| + !source.Description       
+      !target.Function           = !source.Function          
+      !target.Purpose            = !source.Purpose           
+      !target.Number             = !source.Number            
+      !target.Area               = !source.Area              
+      !target.:MTO-USEMTOFLAGS   = !source.:MTO-USEMTOFLAGS  
+      !target.:MTO-INCLUDEBOLTS  = !source.:MTO-INCLUDEBOLTS 
+      !target.:MTO-ADDBENDS      = !source.:MTO-ADDBENDS     
+      !target.:MTO-ADDWELD       = !source.:MTO-ADDWELD     
+      !target.:MTO-ADDATTA       = !source.:MTO-ADDATTA     
+      !target.:MTO-BY-PIPE       = !source.:MTO-BY-PIPE      
+      !target.:MTO-PIPE-SORTHIER = !source.:MTO-PIPE-SORTHIER      
+      !target.:MTO-SUMM          = !source.:MTO-SUMM         
+      !target.:MTO-BY-SPEC       = !source.:MTO-BY-SPEC      
+      !target.:MTO-CONFIGLINK    = !source.:MTO-CONFIGLINK
+      !target.:MTO-KEEP-DEL      = !source.:MTO-KEEP-DEL     
+      handle any
+      endhandle
+
+      !target.:MTO-SIKLA-MODE      = !source.:MTO-SIKLA-MODE
+      handle any
+      endhandle
+
+      !target.:MTO-UNIT-FILE      = !source.:MTO-UNIT-FILE     
+      handle any
+      endhandle
+      
+      !target.:MTO-OPTION-FILE    = !source.:MTO-OPTION-FILE     
+      handle any
+      endhandle
+
+
+      do !mem value !source.member
+        if !mem.acttype eq |:MTOSOURCE| then
+          NEW :MTOSOURCE COPY $!mem
+          BREAK
+        endif
+      enddo
+    enddo
+    
+    if !sel.size() eq 1 then
+      $!target
+      !!MTOmodifiyDef(!!ce,TRUE)
+    else
+      -- reload definitons
+      !this.loadmtogrps()
+    endif
+    
+  elseif !action.lowcase() eq |mod| then
+    
+    if !sel.empty() then
+      RETURN
+    endif
+    
+    if !sel.size() gt 1 then
+      !!alert.error(|Modify is possible for single Selection only!|)
+      RETURN
+    endif
+    $!sel[1]
+    !!MTOmodifiyDef(!!ce,FALSE)
+    
+  elseif !action.lowcase() eq |del| then
+
+    if !sel.empty() then
+      RETURN
+    endif
+    
+    !ans = !!alert.confirm(|Do you really want to delete selected MTO Definitions?|)
+    if !ans neq |YES| then
+      RETURN
+    endif
+    
+    -- check mtos for revisions
+    do !i index !sel
+      var !mtover coll all ZONE with acttype eq |:MTOVERS| for $!sel[$!i]
+      var !rel eval :MTO-RELEASED for all from !mtover
+      !chkrel = !rel.find(|true|)
+      if !chkrel.empty().not() then
+        !ans = !!alert.confirm(|There are one or more RELEASED Versions - Do you really want to delete these MTOs?|)
+        if !ans neq |YES| then
+          RETURN
+        endif
+        BREAK
+      endif
+    enddo
+    
+    -- delete MTOGRPs
+    do !i index !sel
+      $!sel[$!i]
+      DELETE :MTOGRP
+      handle any
+        $P ERROR - $!!error.text
+      endhandle
+    enddo
+    
+    -- reload definitons
+    !this.loadmtogrps()
+    
+  elseif !action.lowcase() eq |ll| then
+    
+    -- create / update GPSET with PIPEs for Linelist
+    !this.createlinelist()
+
+  endif
+  
+  -- goto preview CE
+  $!tmpce
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      setversion
+--
+-- Description: Add / Remove versions to netgrid
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setversion(!action is STRING)
+  
+  !grps = !this.mtodefdatalistGridSelection
+  
+  !allvers = array()
+  !lastvers = array()
+  !lastrevs = array()
+  
+  do !i index !grps
+    var !a coll all ZONE with acttype eq |:MTOVERS| for $!grps[$!i]
+    var !lvers eval :MTO-VERS-LATEST for all from !a
+    var !lrev eval :MTO-REV-LATEST for all from !a
+    
+    !allvers.appendarray(!a)
+    
+    !ind = !lvers.find('true')
+    if !ind.empty().not() then
+      !lastvers.append(!a[$!ind[1]])
+    endif
+    
+    !ind = !lrev.find('true')
+    if !ind.empty().not() then
+      !lastrevs.append(!a[$!ind[1]])
+    endif
+
+  enddo
+  
+  -- add versions
+  if !action.lowcase() eq 'addlastver' then
+    !this.mtoversloaded.appendarray(!lastvers)
+  elseif !action.lowcase() eq 'addlastrev' then
+    !this.mtoversloaded.appendarray(!lastrevs)
+  elseif !action.lowcase() eq 'addallver' then
+    !this.mtoversloaded.appendarray(!allvers)
+  endif
+
+  -- add versions - only
+  if !action.lowcase() eq 'onlylastver' then
+    !this.mtoversloaded.clear()
+    !this.mtoversloaded.appendarray(!lastvers)
+  elseif !action.lowcase() eq 'onlylastrev' then
+    !this.mtoversloaded.clear()
+    !this.mtoversloaded.appendarray(!lastrevs)
+  elseif !action.lowcase() eq 'onlyallver' then
+    !this.mtoversloaded.clear()
+    !this.mtoversloaded.appendarray(!allvers)
+  endif
+  
+  -- rem versions
+  if !action.lowcase() eq 'remlastver' then
+    !diff = !this.mtoversloaded.difference(!lastvers)
+    !this.mtoversloaded = !diff
+  elseif !action.lowcase() eq 'remlastrev' then
+    !diff = !this.mtoversloaded.difference(!lastrevs)
+    !this.mtoversloaded = !diff
+  elseif !action.lowcase() eq 'remallver' then
+    !diff = !this.mtoversloaded.difference(!allvers)
+    !this.mtoversloaded = !diff
+  endif
+  
+  !this.mtoversloaded.unique()
+
+  -- load data
+  !this.loadmtovers()
+
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      setmto
+--
+-- Description: Add / Remove MTOs to netgrid
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setmto(!action is STRING)
+  
+  !vers = !this.mtoversdatalistGridSelection
+  
+  !allmtos = array()
+  !pipemtos = array()
+  !summmtos = array()
+  
+  do !i index !vers
+    var !p coll all PIPE with acttype eq |:MTOPIPE| for $!vers[$!i]
+    var !s coll all PIPE with acttype eq |:MTOSUMM| for $!vers[$!i]
+    
+    
+    !allmtos.appendarray(!p)
+    !allmtos.appendarray(!s)
+    
+    !pipemtos.appendarray(!p)
+    
+    !summmtos.appendarray(!s)
+  enddo
+  
+  -- add MTOs
+  if !action.lowcase() eq 'addsummmto' then
+    !this.mtosloaded.appendarray(!summmtos)
+  elseif !action.lowcase() eq 'addpipemto' then
+    !this.mtosloaded.appendarray(!pipemtos)
+  elseif !action.lowcase() eq 'addallmto' then
+    !this.mtosloaded.appendarray(!allmtos)
+  endif
+
+  -- add MTOs ONLY
+  if !action.lowcase() eq 'onlysummmto' then
+    !this.mtosloaded.clear()
+    !this.mtosloaded.appendarray(!summmtos)
+  elseif !action.lowcase() eq 'onlypipemto' then
+    !this.mtosloaded.clear()
+    !this.mtosloaded.appendarray(!pipemtos)
+  elseif !action.lowcase() eq 'onlyallmto' then
+    !this.mtosloaded.clear()
+    !this.mtosloaded.appendarray(!allmtos)
+  endif
+  
+  -- rem MTOs
+  if !action.lowcase() eq 'remsummmto' then
+    !diff = !this.mtosloaded.difference(!summmtos)
+    !this.mtosloaded = !diff
+  elseif !action.lowcase() eq 'rempipemto' then
+    !diff = !this.mtosloaded.difference(!pipemtos)
+    !this.mtosloaded = !diff
+  elseif !action.lowcase() eq 'remallmto' then
+    !diff = !this.mtosloaded.difference(!allmtos)
+    !this.mtosloaded = !diff
+  endif
+  
+  !this.mtosloaded.unique()
+  
+  -- update links?
+  do !i index !this.mtosloaded
+    !mto = !this.mtosloaded[$!i].dbref()
+    if !mto.acttype eq |:MTOPIPE| then
+      if !mto.:MTODESLNK.badref().not() then
+        !mto.:MTODESLNKNAME = !mto.:MTODESLNK.name
+      else
+        -- try to find pipe
+        !dbele = !mto.:MTODESLNKNAME.dbref()
+        handle any
+          SKIP
+        elsehandle none
+          if !dbele.unset() then
+            $P WARNING - $!mto - Could not relink MTO - All link data has been lost...
+            SKIP
+          endif
+          if !dbele.type eq |PIPE| then
+            !mto.:MTODESLNK = !dbele
+          endif
+        endhandle
+      endif
+    endif
+  enddo
+  
+  -- load data
+  !this.loadmtos()
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      createnewversion
+--
+-- Description: Create new MTO version
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .createnewversion(!sender is STRING)
+  
+  !tmpce = !!ce
+  
+  !!errorlog = array()
+  !!bolterrorlog = array()
+  
+  if !sender.upcase() eq |MTOGRP| then
+    !mtogrps = !this.mtodefdatalistGridSelection
+  elseif !sender.upcase() eq |MTOVERS| then
+    !mtogrps = array()
+    !vers = !this.mtoversdatalistGridSelection
+    do !i index !vers
+      !owner = !vers[$!i].owner
+      !mtogrps.append(!owner)
+    enddo
+  else
+    !!alert.error(|Method call not valid!|)
+    RETURN
+  endif
+  
+  !mtogrps.unique()
+  
+  !mtostru = object mtostructure()
+  !mtog = =0/0
+  
+  -- load mtocontroller
+  !!mtocntrl = object mtocontroller()
+--  !!mtocntrl.loadConfig()
+--  handle 1
+--    RETURN
+--  endhandle
+  
+
+  -- check source is up to date
+  do !i index !mtogrps
+
+    !mtog = !mtogrps[$!i]
+    handle any
+      SKIP
+    endhandle
+
+    !valid = !!mtogetMTOSRCVALID(!mtog)
+    if !valid.not() then
+      $(
+        if not(defined(!!updateMTOsource)) then
+          !ans = !!alert.question(|Source in MTO Definiton is not up to date for 1 ore more MTOs! Update Source?|)
+          if !ans eq |YES| then
+            !!updateMTOsource = true
+          elseif !ans eq |NO| then
+            !!updateMTOsource = false
+          else
+            return        
+          endif
+        endif
+        if !!updateMTOsource eq true then
+      $)
+      !srcHandler = object mtoSourceHandler()
+      !srcHandler.getMTOdefiniton(!mtog)
+      !srcHandler.updateSourceInDB()
+      -- endif
+    endif
+
+  enddo
+
+  -- !!updateMTOsource.delete()
+  -- handle any
+  -- endhandle
+
+  -- create MTOs
+  do !i index !mtogrps
+    !mtog = !mtogrps[$!i]
+    handle any
+      -- $P Could not create new version for $!mtogrps[$!i]
+      !info = |ERROR - Could not create new version for | + !mtogrps[$!i]
+      !!errorlog.append(!info)
+      SKIP
+    endhandle
+
+    !!mtocntrl.loadConfig(!mtog)
+    handle 1
+      !info = |ERROR - Configuration not found for | + !mtogrps[$!i]
+      !!errorlog.append(!info)
+      SKIP
+    endhandle
+    
+    -- crete new version
+    !mtostru.mtostructure(!mtog)
+    !mtostru.newversion()
+    
+    -- load mto data
+    !!mtocntrl.setversion(!mtostru)
+    
+    -- extract design data
+    !!mtocntrl.extractMTO()
+    
+    -- build in DB and compare quantities
+    !!mtocntrl.writeMTOtoDB()
+    !!mtocntrl.compareMTO()
+    
+  enddo
+
+  -- update grid!!
+  !this.loadmtogrps()
+
+
+  !this.setversion('addlastver')
+  
+  $!tmpce
+  handle any
+  endhandle
+  
+  !!errorlog.sortunique()
+  !!bolterrorlog.sortunique()
+  
+  if !!errorlog.empty() and !!bolterrorlog.empty() then
+    !!alert.message(|MTO creation finished - No error detected!|)
+  else
+    !!errorlog.insert(1,|***** Piping component errors - START *****|)
+    !!errorlog.append(|***** Piping component errors - END *****|)
+    !!errorlog.append(||)
+    !!errorlog.append(|***** Bolting errors - START *****|)
+    !!errorlog.appendarray(!!bolterrorlog)
+    !!errorlog.append(|***** Bolting errors - END *****|)
+    
+    !date = object datetime()
+    !datestr = !date.string()
+    !datestr = !datestr.replace(|:|,|-|).replace(| |,|_|)
+    !filename = |%aveva_design_user%\logfile-MTOrun-| + !datestr + |.txt|
+    !logfile = object file(!filename)
+    !logfile.writefile(|OVER|,!!errorlog)
+    SYSCOM 'start $!filename'
+    !!alert.message(|MTO creation finished - Please check logfile!|)
+  endif
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      createlinelist
+--
+-- Description: Create new MTO version
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .createlinelist()
+  
+  !tmpce = !!ce
+  
+  !errorlog = array()
+  
+  !mtogrps = !this.mtodefdatalistGridSelection
+  !mtogrps.unique()
+
+  if !mtogrps.empty() then
+    RETURN
+  endif
+
+  !mtostru = object mtostructure()
+  !mtog = =0/0
+  
+  -- load mtocontroller
+  !!mtocntrl = object mtocontroller()
+  
+  do !i index !mtogrps
+
+    !mtog = !mtogrps[$!i]
+    handle any
+      -- $P Could not create line list for $!mtogrps[$!i]
+      !info = |ERROR - Could not create line list for | + !mtogrps[$!i].string()
+      !errorlog.append(!info)
+      !errorlog.append(!!error.text)
+      !errorlog.append(!!error.line)
+      !errorlog.appendarray(!!error.callstack)
+      SKIP
+    endhandle
+
+    !!mtocntrl.loadConfig(!mtog)
+    handle any
+      !info = |ERROR - Configuration not found for | + !mtog.name
+      !errorlog.append(!info)
+      !errorlog.append(!info)
+      !errorlog.append(!!error.text)
+      !errorlog.append(!!error.line)
+      !errorlog.appendarray(!!error.callstack)
+      SKIP
+    endhandle
+
+    -- load mto strcuture
+    !mtostru.mtostructure(!mtog)
+    handle any
+      !info = |ERROR - With MTO structure | + !mtog.name
+      !errorlog.append(!info)
+      !errorlog.append(!info)
+      !errorlog.append(!!error.text)
+      !errorlog.append(!!error.line)
+      !errorlog.appendarray(!!error.callstack)
+      SKIP
+    endhandle
+
+    -- load mto data (pipes as a member!)
+    !!mtocntrl.getPipesOnly(!mtostru)
+    handle any
+      !info = |ERROR - With MTO version | + !mtog.name
+      !errorlog.append(!info)
+      !errorlog.append(!info)
+      !errorlog.append(!!error.text)
+      !errorlog.append(!!error.line)
+      !errorlog.appendarray(!!error.callstack)
+      SKIP
+    endhandle
+
+    -- extract design data
+    !pipes = !!mtocntrl.pipes
+    
+    -- create update GPSET
+    !!mtoCreateLineList(!mtog,!pipes)
+    handle any
+      !info = |ERROR - With GPSET creation | + !mtog.name
+      !errorlog.append(!info)
+      !errorlog.append(!info)
+      !errorlog.append(!!error.text)
+      !errorlog.append(!!error.line)
+      !errorlog.appendarray(!!error.callstack)
+      SKIP
+    endhandle
+
+  enddo
+  
+  $!tmpce
+  handle any
+  endhandle
+  
+  if !errorlog.empty() then
+    !!alert.message(|Linelist creation finished - No error detected!|)
+  else
+    !date = object datetime()
+    !datestr = !date.string()
+    !datestr = !datestr.replace(|:|,|-|).replace(| |,|_|)
+    
+    !filename = |%aveva_design_user%\logfile-linelist-| + !datestr + |.txt|
+    !logfile = object file(!filename)
+    !logfile.writefile(|OVER|,!errorlog)
+    
+    SYSCOM 'start $!filename'
+    !!alert.message(|Linelist creation finished - Please check logfile!|)
+  endif
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      releaseLatest
+--
+-- Description: Release latest MTO
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .releaseLatest(!sender is STRING)
+  
+  if !sender.upcase() eq |MTOGRP| then
+    !mtogrps = !this.mtodefdatalistGridSelection
+--    !visib = |!this.frame1.visible = TRUE|
+    !visib = |!this.frame1.selected = TRUE|
+  elseif !sender.upcase() eq |MTOVERS| then
+--    !visib = |!this.frame2.visible = TRUE|
+    !visib = |!this.frame2.visible = TRUE|
+    !mtogrps = array()
+    !vers = !this.mtoversdatalistGridSelection
+    do !i index !vers
+      !owner = !vers[$!i].owner
+      !mtogrps.append(!owner)
+    enddo
+  else
+    !!alert.error(|Method call not valid!|)
+    RETURN
+  endif
+  
+  !mtogrps.unique()
+  
+  !mtostru = object mtostructure()
+  !mtog = =0/0
+  
+  do !i index !mtogrps
+    !mtog = !mtogrps[$!i]
+    handle any
+--      $P DB Element not valid for $!mtogrps[$!i]
+      !info = |ERROR - DB Element not valid for | + !mtogrps[$!i]
+      !!errorlog.append(!info)
+      SKIP
+    endhandle
+    
+    -- get structure object for group
+    !mtostru.mtostructure(!mtog)
+    !mtostru.releaseMto()
+  enddo
+  
+  !this.setversion('addlastrev')
+  
+  !this.loadmtos()
+  $!visib
+  
+  !!alert.message(|MTO release finished!|)  
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      openpipeviewer
+--
+-- Description: Open PIPE viewer for MTO
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .openpipeviewer(!sender is STRING)
+  
+  if !sender.upcase() eq |MTOGRP| then
+    !mtogrps = !this.mtodefdatalistGridSelection
+--    !visib = |!this.frame1.visible = TRUE|
+    !visib = |!this.frame1.selected = TRUE|
+  elseif !sender.upcase() eq |MTOVERS| then
+--    !visib = |!this.frame2.visible = TRUE|
+    !visib = |!this.frame2.visible = TRUE|
+    !mtogrps = array()
+    !vers = !this.mtoversdatalistGridSelection
+    do !i index !vers
+      !owner = !vers[$!i].owner
+      !mtogrps.append(!owner)
+    enddo
+  else
+    !!alert.error(|Method call not valid!|)
+    RETURN
+  endif
+  
+  !mtogrps.unique()
+
+  if !mtogrps.size() gt 1 then
+    !!alert.error(|Plese select only 1 MTO Definiton!|)
+    return
+  endif
+
+  if !mtogrps.empty() then
+    return
+  endif
+
+  -- q var !mtogrps[1]
+
+  show !!MTOpipelistViewer At xr 0.55 yr 0.2
+  !!MTOpipelistViewer.caller = |MTOMANAGER|
+  !!MTOpipelistViewer.getMTOgroup(!mtogrps[1])
+  
+  if !!MTOpipelistViewer.srcHandler.same.not() then
+    !ans = !!alert.confirm(|Source in MTO Definiton is not up to date! Update Source?|)
+    if !ans eq |YES| then
+      !!MTOpipelistViewer.srcHandler.updateSourceInDB()
+    endif
+  endif
+
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      delununsedvers
+--
+-- Description: Delete unused MTO Versions
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .delununsedvers()
+  
+  !ans = !!alert.confirm(|Do you really want to delete unused Versions?|)
+  if !ans neq |YES| then
+    RETURN
+  endif
+  
+  !mtogrps = !this.mtodefdatalistGridSelection
+  
+  !mtogrps.unique()
+  
+  do !i index !mtogrps
+    !mtog = !mtogrps[$!i]
+    handle any
+      $P DB Element not valid for $!mtogrps[$!i]
+      SKIP
+    endhandle
+    
+    do !mtovers value !mtog.member
+      if !mtovers.acttype eq |:MTOVERS| then
+        !flag = !mtovers.:MTO-VERS-LATEST or !mtovers.:MTO-REV-LATEST or !mtovers.:MTO-RELEASED
+        if !flag eq TRUE then
+          -- valid version
+        else
+          $!mtovers
+          DELETE :MTOVERS
+          handle any
+            $P $!!error.text
+          endhandle
+        endif
+      endif
+    enddo
+  enddo
+
+  !this.mtodefdatalistGrid.refreshtable()
+  !this.mtodefdatalistGrid.AUTOFITCOLUMNS()
+  
+  !!alert.message(|MTO Version cleanup - finished!|)  
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      openpreviews
+--
+-- Description: show mtodata in NETGRID previews
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .openpreviews(!unitStyle is BOOLEAN)
+  
+  !mtos = !this.mtosdatalistGridSelection
+  !sz = !mtos.size()
+  
+  if !sz gt 10 then
+    !quest = |Do you really want to open | + !sz.string('D0') + | MTO previews?|
+    !ans = !!alert.confirm(!quest)
+    if !ans neq |YES| then
+      RETURN
+    endif
+  endif
+  
+  !mtov = object mtoviews()
+  
+  do !mto value !mtos
+    !!mtoviews.loadmto(!mto, !unitStyle)
+  enddo
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      setmydata
+--
+-- Description: Set selection as MyData Collection (Old collections will be removed!)
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setmydata()
+  
+  IMPORT 'MyDataAddin'
+  handle any
+  endhandle
+  USING NAMESPACE 'Aveva.Pdms.Presentation.MyDataAddin'
+  handle any
+  endhandle
+  USING NAMESPACE 'Aveva.Core.Presentation.MyDataAddin'
+  handle any
+  endhandle
+  
+  !mydata = object pmlmydata()
+  
+  !mydata.removeall()
+  !collPIP = |MTOcollection-PIPEs|
+  !collMTO = |MTOcollection-MTOs|
+  !mtos = array()
+  !pipes = array()
+  
+  do !i index !this.mtosdatalistGridSelection
+    !mto = !this.mtosdatalistGridSelection[$!i]
+    !deslnk = !mto.:MTODESLNK
+    handle any
+      !deslnk = =0/0
+    endhandle
+    if !deslnk.badref().not() then
+      !pipes.append(!deslnk.string())
+    endif
+    !mtos.append(!mto.string())
+  enddo
+  
+  !mydata.addcollection(!collPIP)
+  handle(1000,1)
+    -- collection exists
+    !mydata.removecollection(!collPIP)
+    !mydata.addcollection(!collPIP)
+  endhandle
+  
+  !mydata.addelementstocollection(!pipes,!collPIP)
+
+  !mydata.addcollection(!collMTO)
+  handle(1000,1)
+    -- collection exists
+    !mydata.removecollection(!collMTO)
+    !mydata.addcollection(!collMTO)
+  endhandle
+  
+  !mydata.addelementstocollection(!mtos,!collMTO)
+  
+  -- create / update list
+  
+  -- Find out the names of the current lists
+  !listNames = !!cdcList.name.dText
+  !listNum   = !!cdcList.name.rText
+
+  if (!listNames[1] eq 'No list') then
+
+    -- If no lists defined
+
+    !listNames[1] = !collPIP
+    !listNum[1]   = '1'
+    !newNumA       = '1'
+
+    !listNames[2] = !collMTO
+    !listNum[2]   = '2'
+    !newNumB       = '2'
+    
+  else
+    -- Make a new list called claimlist(n) and add it to the list
+    
+    if (!listNames.findFirst(!collPIP).unset()) then
+      !listNames.append(!collPIP)
+      !arraySize = arraySize(!listNames)
+      !newNumA    = !arraySize.string()
+      !listNum.append(!newNumA)
+    else
+      !newNumA = !listNames.findFirst(!collPIP)
+    endif
+
+    if (!listNames.findFirst(!collMTO).unset()) then
+      !listNames.append(!collMTO)
+      !arraySize = arraySize(!listNames)
+      !newNumB    = !arraySize.string()
+      !listNum.append(!newNumB)
+    else
+      !newNumB = !listNames.findFirst(!collMTO)
+    endif
+  
+  endif
+  
+  !!cdcList.name.dText = !listNames
+  !!cdcList.name.rText = !listNum
+  !!cdList             = !listNames
+  
+  !tempListPIP = !pipes
+  !tempListMTO = !mtos
+  
+  -- This needs to be converted to database references for the list gadget to work correctly
+
+  !block       = object BLOCK('!tempListPIP[!evalIndex].dbRef().string()')
+  !listDbRefsPIP  = !tempListPIP.evaluate(!block)
+
+  !!cdList$!newNumA = !listDbRefsPIP
+
+  !block       = object BLOCK('!tempListMTO[!evalIndex].dbRef().string()')
+  !listDbRefsMTO  = !tempListMTO.evaluate(!block)
+
+  !!cdList$!newNumB = !listDbRefsMTO
+  
+  
+  -- Reinitialise the list form
+  $M "%PDMSUI%/CLIB/FILES/ILIST"
+  handle any
+  endhandle
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      printmtos()
+--
+-- Description: print mtos by Report designer
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .printmtos(!gadget is MENU, !action is STRING)
+
+  
+$(
+  !!check = array()
+  !!check.append(!gadget)
+  !!check.append(!pick)
+  PRINTMENUVER - Summary MTOs
+  PRINTMENUVER - Pipe MTOs
+  PRINTMENUVER - ALL MTOs
+  PRINTMENU - LATEST Version
+  PRINTMENU - LATEST Revision
+  LISTPOPUPMTOS - Print MTO(s)
+  member .mtodefdatalistGridSelection    is ARRAY
+  member .mtoversdatalistGridSelection   is ARRAY
+  member .mtosdatalistGridSelection      is ARRAY
+
+  !name = !gadget.name()
+  !pick = !gadget.PICKEDFIELD
+  
+  $P $!name - $!pick
+$)
+  
+  !name = !gadget.name()
+  !pick = !gadget.PICKEDFIELD
+  
+  !selection = array()
+  
+  if !name.upcase() eq |PRINTMENU| then
+    
+    !mtogrps = !this.mtodefdatalistGridSelection
+    
+    -- get latest Mtos for mtodefinitions
+    if !pick.lowcase().matchwild(|*revision*|) then
+      -- get all mtos for latest revisions
+      !att = |mtolastrev|
+    else
+      -- get all mtos for latest versions
+      !att = |mtolastver|
+    endif
+    
+    !mtovers = array()
+    do !mtog value !mtogrps
+      !mtostr = object mtostructure(!mtog)
+      !mtov = !mtostr.$!att
+      if !mtov.badref().not() then
+        !mtovers.append(!mtov)
+      endif
+    enddo
+    
+    !mtovers.sortunique()
+    
+    $(
+    !ans = !!alert.question(|Export single Files for PIPE MTOs (YES) or put all PIPE MTOs into one File (NO)?|)
+    if !ans eq |YES| then
+      !single = TRUE
+    elseif !ans eq |NO| then
+      !single = FALSE
+    else
+      RETURN
+    endif
+    $)
+    
+    show !!MTOprintRD
+    !!mtoBulkPrint.mtos.clear()
+    !!mtoBulkPrint.mtovers = !mtovers
+    
+    $(
+    !!mtoBulkPrint.userfile = ||
+    !!mtoBulkPrint.single = !single
+    !!mtoBulkPrint.mtos.clear()
+    !!mtoBulkPrint.mtovers = !mtovers
+    !!MTOprintRD.getreports()
+    $)
+    
+  elseif !name.upcase() eq |PRINTMENUVER| then
+    
+    !mtovers = !this.mtoversdatalistGridSelection
+    
+    -- get ALL Mtos for version
+    if !pick.lowcase().matchwild(|*summary*|) then
+      -- get all summary mtos for selected versions
+      !acttype = |:MTOSUMM|
+    elseif !pick.lowcase().matchwild(|*pipe*|) then
+      -- get all pipe mtos for selected versions
+      !acttype = |:MTOPIPE|
+    else
+      -- get all mtos for selected versions
+      !acttype = ||
+    endif
+    
+    !allmtos = array()
+    do !i index !mtovers
+      !mtos = array()
+      if !acttype eq || then
+        !mtos = !mtovers[$!i].member
+      else
+        do !mem value !mtovers[$!i].member
+          if !mem.acttype eq !acttype then
+            !mtos.append(!mem)
+          endif
+        enddo
+      endif
+      !allmtos[$!i] = !mtos
+    enddo
+    
+    $(
+    if !acttype neq |:MTOSUMM| then
+      !ans = !!alert.question(|Export single Files for PIPE MTOs (YES) or put all PIPE MTOs into one File (NO)?|)
+      if !ans eq |YES| then
+        !single = TRUE
+      elseif !ans eq |NO| then
+        !single = FALSE
+      else
+        RETURN
+      endif
+    else
+      !single = TRUE
+    endif
+    $)
+    
+    show !!MTOprintRD
+    !!mtoBulkPrint.mtos = !allmtos
+    !!mtoBulkPrint.mtovers = !mtovers
+    
+    $(
+    !!mtoBulkPrint.userfile = ||
+    !!mtoBulkPrint.single = !single
+    !!mtoBulkPrint.mtos = !allmtos
+    !!mtoBulkPrint.mtovers = !mtovers
+    !!MTOprintRD.getreports()    
+    $)
+    
+  elseif !name.upcase() eq |LISTPOPUPMTOS| then
+    
+    !mtos = !this.mtosdatalistGridSelection
+    -- group mtos per MTOGRP ??
+    !mtovers = array()
+    !allmtos = array()
+    
+    !tmpmtovers = array()
+    !tmpallmtos = array()
+    
+    !pipeflag = FALSE
+    
+    do !mto value !mtos
+      !mtov = !mto.owner
+      !tmpmtovers.append(!mtov)
+      !tmpallmtos.append(!mto)
+      if !mto.acttype eq |:MTOPIPE| then
+        !pipeflag = TRUE
+      endif
+    enddo
+    
+    !mtovers = !tmpmtovers
+    !mtovers.sortunique()
+    
+    do !i index !mtovers
+      !ind = !tmpmtovers.find(!mtovers[$!i])
+      !mtos = array()
+      do !j value !ind
+        !mtos.append(!tmpallmtos[$!j])
+      enddo
+      !allmtos[$!i] = !mtos
+    enddo
+    
+    $(
+    !filename = ||
+    
+    if !pipeflag then
+      !ans = !!alert.question(|Export single Files for PIPE MTOs (YES) or put all PIPE MTOs into one File (NO)?|)
+      if !ans eq |NO| then
+        !filename = !!alert.input(|Export enter Filename (Appendix) for PIPEs file:|,|myPipeCollection|)
+        if !filename.replace(| |,||) eq || then
+          !filename = |myPipeCollection|
+        endif
+        !single = FALSE
+      elseif !ans eq |YES| then
+        !single = TRUE
+      else
+        RETURN
+      endif
+    else
+      !single = TRUE
+    endif
+    $)
+    
+    show !!MTOprintRD
+    !!mtoBulkPrint.mtos = !allmtos
+    !!mtoBulkPrint.mtovers = !mtovers
+    
+    $(
+    !!mtoBulkPrint.userfile = !filename
+    !!mtoBulkPrint.single = !single
+    !!mtoBulkPrint.mtos = !allmtos
+    !!mtoBulkPrint.mtovers = !mtovers
+    !!MTOprintRD.getreports()
+    $)
+    
+  else
+    RETURN ERROR 1 'PopUp call not defined!'
+  endif
+
+$(  
+  hide !!MTOprintRD
+  
+  -- set export path
+  if defined(!!lastmtoexportpath) then
+    !tar = !!lastmtoexportpath
+  else
+    !tar = |%PDMSUSER%\|
+  endif
+  
+  !!fileBrowser('$!tar', 'Reports', 'Target folder', false, '!!MTOprintRD.settarget(!!fileBrowser.file.pathname())')
+$)
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dummy
+--
+-- Description: Dummy
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dummy()
+  
+  $P D U M M Y   M E T H O D   C A L L
+  
+endmethod
+-- End of method definition
+
+
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+-- 
+--
+-- END OF USED METHODS !!
+-- 
+-- 
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+
+

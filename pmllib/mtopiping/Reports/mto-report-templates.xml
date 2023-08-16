@@ -1,0 +1,7 @@
+<REPORT>
+  <NAME>MTO-Zeppelin</NAME>
+  <PIPE>%PMLLIB%\mtopiping\Reports\MTO-Zeppelin-Dflt-Pipe.repv</PIPE>
+  <SUMM>%PMLLIB%\mtopiping\Reports\MTO-Zeppelin-Dflt-Summ.repv</SUMM>
+  <SAPPIPE>%PMLLIB%\mtopiping\Reports\SAP-MTO-Zeppelin-Pipe.repv</SAPPIPE>
+  <SAPSUMM>%PMLLIB%\mtopiping\Reports\SAP-MTO-Zeppelin-Summ.repv</SAPSUMM>
+</REPORT>

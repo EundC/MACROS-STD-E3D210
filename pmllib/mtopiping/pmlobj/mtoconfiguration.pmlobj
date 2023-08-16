@@ -1,0 +1,1230 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoconfiguration.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.02.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO controller
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+-- 
+
+define object mtoconfiguration
+  
+  -- Config data
+  member .mtoDBconfig     is DBREF
+  
+  -- Definition Arrays
+  member .sortid          is ARRAY
+  member .sorttypes       is ARRAY
+  member .mtouid          is ARRAY
+  
+  -- Mapping data
+  member .mtoattr         is ARRAY
+  member .bmemattr        is ARRAY
+  member .boltattr        is ARRAY
+  
+  -- client UDAs
+  member .clientUDA       is ARRAY
+  
+endobject
+
+-- End of object definition for mtoconfiguration
+
+------------------------------------------------------------------------
+--
+-- Method:      mtoconfiguration
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtoconfiguration()
+  
+  
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadconfig
+--
+-- Description: Load config data from DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadconfig(!mtogrp is DBREF)
+  
+  !this.sortid.clear()  
+  !this.sorttypes.clear()  
+  !this.mtouid.clear()  
+  !this.mtoattr.clear()  
+  !this.bmemattr.clear()  
+  !this.boltattr.clear()  
+  
+  FORWARD
+  handle any
+  endhandle
+  
+  -- find MTO config DB Element
+  -- var !conf coll all SITE with acttype eq |:MTOCONFIG|
+  !conf = !mtogrp.:MTO-CONFIGLINK
+  
+  if !conf.badref() then
+    -- use hardcoded
+    !!alert.error(|No MTO configuration found! MTO run aborted!|)
+    RETURN ERROR 1
+  else
+    !this.mtoDBconfig = !conf
+  endif
+
+  !this.loadconfig()
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadconfig
+--
+-- Description: Load config data from DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadconfig()
+  
+  !this.sortid.clear()  
+  !this.sorttypes.clear()  
+  !this.mtouid.clear()  
+  !this.mtoattr.clear()  
+  !this.bmemattr.clear()  
+  !this.boltattr.clear()  
+  
+  FORWARD
+  handle any
+  endhandle
+  
+  !loaddefsort = true
+  !loaddefuid = true
+  !loaddefmapp = true
+  
+  if !this.mtoDBconfig.badref() then
+    -- use hardcoded
+  else
+    -- load config from DB
+    var !sort coll all ZONE with acttype eq |:MTOCONFSORT| for $!this.mtoDBconfig
+    var !uid  coll all ZONE with acttype eq |:MTOCONFUID|  for $!this.mtoDBconfig
+    var !mapp coll all ZONE with acttype eq |:MTOCONFMAPP| for $!this.mtoDBconfig
+    
+    -- sorting
+    -- TYPE, BORE[1-4], SPEC, STYPE, MTXX, HIERARCHY
+    !dbsort = !sort[1].dbref()
+    handle any
+    elsehandle none
+      !this.sortid = !dbsort.:MTOCONF-SORT.trim().split()
+      !this.sorttypes[1] = !dbsort.:MTOCONF-SORTTYPES.trim().split()
+      !loaddefsort = false
+    endhandle
+    
+    -- uid
+    !dbuid = !uid[1].dbref()
+    handle any
+    elsehandle none
+      !tmpprio = array()
+      !tmpexpr = array()
+      do !mem value !dbuid.member
+        !tmpprio.append(!mem.:MTOCONF-UID-SEQU)
+        !tmpexpr.append(!mem.:MTOCONF-UID-ATTR.trim())
+      enddo
+      
+      !tmpsort = !tmpprio
+      !tmpsort.sortunique()
+      
+      do !i value !tmpsort
+        !ind = !tmpprio.find(!i)
+        !this.mtouid.append(!tmpexpr[$!ind[1]])
+      enddo
+      
+      !loaddefuid = false
+    endhandle
+    
+    -- mapping
+    !dbmapp = !mapp[1].dbref()
+    handle any
+    elsehandle none
+      do !mem value !dbmapp.member
+        !mtoatt = !mem.:MTOCONF-MAPP-MTOATT
+        !bmematt = !mem.:MTOCONF-MAPP-BMEMATT
+        !boltatt = !mem.:MTOCONF-MAPP-BOLTATT
+        if !mtoatt.unset() or !mtoatt.replace(| |,||) eq || then
+          SKIP
+        endif
+        if ( !bmematt.unset() or !bmematt.replace(| |,||) eq || ) and ( !boltatt.unset() or !boltatt.replace(| |,||) eq || ) then
+          SKIP
+        endif
+        !this.mtoattr.append(!mtoatt)
+        !this.bmemattr.append(!bmematt)
+        !this.boltattr.append(!boltatt)
+      enddo
+      if !this.mtoattr.empty().not() then
+        !loaddefmapp = false
+      endif
+    endhandle
+  endif
+  
+  
+  -- load default sort
+  if !loaddefsort then
+    !this.sortid.append('TYPE')
+    !this.sortid.append('BORE')
+    !this.sortid.append('STYP')
+    !this.sortid.append('MTXX')
+    
+    !this.sorttypes[1] = array()
+    !this.sorttypes[1].append('TUBI')
+    !this.sorttypes[1].append('BEND')
+    !this.sorttypes[1].append('FTUB')
+    !this.sorttypes[1].append('ELBO')
+    !this.sorttypes[1].append('TEE')
+    !this.sorttypes[1].append('CROS')
+    !this.sorttypes[1].append('OLET')
+    !this.sorttypes[1].append('REDU')
+    !this.sorttypes[1].append('COUP')
+    !this.sorttypes[1].append('PCOM')
+    !this.sorttypes[1].append('UNIO')
+    !this.sorttypes[1].append('FLEX')
+    !this.sorttypes[1].append('CAP')
+    !this.sorttypes[1].append('FLAN')
+    !this.sorttypes[1].append('LJSE')
+    !this.sorttypes[1].append('FBLI')
+    !this.sorttypes[1].append('GASK')
+    !this.sorttypes[1].append('VALV')
+    !this.sorttypes[1].append('VENT')
+    !this.sorttypes[1].append('VTWA')
+    !this.sorttypes[1].append('VFWA')
+    !this.sorttypes[1].append('TRAP')
+    !this.sorttypes[1].append('FILT')
+    !this.sorttypes[1].append('INST')
+    !this.sorttypes[1].append('ATTA')
+    !this.sorttypes[1].append('WELD')
+  endif
+  
+  -- build sorttype replacement
+  !this.sorttypes[2] = array()
+  !letter = |A B C D E F G H I J K L M N O P Q R S T U V W X Y Z|
+  !letspl = !letter.split()
+  !letarr = array()
+  do !i from 1 to 4
+    !srt = |AA| + !letspl[$!i]
+    do !j index !letspl
+      !add = !srt + !letspl[$!j]
+      !letarr.append(!add)
+    enddo
+  enddo
+  
+  do !i index !this.sorttypes[1]
+    !this.sorttypes[2].append(!letarr[$!i])
+  enddo
+  
+  
+  -- load default UID
+  if !loaddefuid then
+    !this.mtouid.append('SPREF')
+  endif
+  
+  
+  -- load default mapping
+  if !loaddefmapp then
+    !this.mtoattr.append(':MTO-DESC01')
+    !this.mtoattr.append(':MTO-DESC02')
+    !this.mtoattr.append(':MTO-DESC03')
+    !this.mtoattr.append(':MTO-STD01')
+    !this.mtoattr.append(':MTO-STD02')
+    !this.mtoattr.append(':MTO-STD03')
+    !this.mtoattr.append(':MTO-DIM01')
+    !this.mtoattr.append(':MTO-DIM02')
+    !this.mtoattr.append(':MTO-DIM03')
+    !this.mtoattr.append(':MTO-MATE01')
+    !this.mtoattr.append(':MTO-MATE02')
+    !this.mtoattr.append(':MTO-MATE03')
+    !this.mtoattr.append(':MTO-ERPNO01')
+    !this.mtoattr.append(':MTO-ERPNO02')
+    !this.mtoattr.append(':MTO-ERPNO03')
+    !this.mtoattr.append(':MTO-SWEIG')
+    !this.mtoattr.append(':MTO-P1BORE')
+    !this.mtoattr.append(':MTO-P2BORE')
+    !this.mtoattr.append(':MTO-P3BORE')
+    !this.mtoattr.append(':MTO-P4BORE')
+    !this.mtoattr.append(':MTO-WTHK1')
+    !this.mtoattr.append(':MTO-WTHK2')
+    !this.mtoattr.append(':MTO-WTHK3')
+    !this.mtoattr.append(':MTO-WTHK4')
+    
+    !this.bmemattr.append('DTXR')
+    !this.bmemattr.append('DTXS')
+    !this.bmemattr.append('DTXT')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('MTXX')
+    !this.bmemattr.append('MTXY')
+    !this.bmemattr.append('MTXZ')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+--    !this.bmemattr.append('CWEI of CMPREF')
+    !this.bmemattr.append('BRWEI')
+    !this.bmemattr.append('P1BORE')
+    !this.bmemattr.append('P2BORE')
+    !this.bmemattr.append('P3BORE')
+    !this.bmemattr.append('P4BORE')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    !this.bmemattr.append('')
+    
+    !this.boltattr.append('DTXR')
+    !this.boltattr.append('DTXS')
+    !this.boltattr.append('DTXT')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('MTXX')
+    !this.boltattr.append('MTXY')
+    !this.boltattr.append('MTXZ')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('BWEI')
+    !this.boltattr.append('BDIA')
+    !this.boltattr.append('BLENG')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    !this.boltattr.append('')
+    
+  endif
+  
+  -- get client UDAs for bolting
+  !this.clientUDA.clear()
+  do !i index !this.mtoattr
+    if !this.mtoattr[$!i].matchwild('*MTO-ERPNO*') then
+      !uda = !this.boltattr[$!i]
+      if !uda.unset() or !uda.replace(| |,||) eq || then
+        skip
+      else
+        !this.clientUDA.append(!uda)
+      endif
+    endif
+  enddo
+  
+  -- get mtouid from material number mapping
+  !newmtouid = array()
+  do !mtouid value !this.mtouid
+    if !mtouid.matchwild('*MTO-ERPNO*') then
+      -- use mapping info!
+      !ind = !this.mtoattr.find(!mtouid)
+      if !ind.empty().not() then
+        !mapuid = !this.bmemattr[$!ind[1]]
+        !newmtouid.append(!mapuid)
+      else
+        $P Could not find Mapping for $!mtouid
+        if defined(!!errorlog) then
+          !info = |ERROR - Could not find Mapping for | + !mtouid
+          !!errorlog.append(!info)
+        endif
+      endif
+    else
+      !newmtouid.append(!mtouid)
+    endif
+  enddo
+  !this.mtouid = !newmtouid
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getsortuid
+--
+-- Description: Get sortid for element
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getsortuid(!obj is ANY) is STRING
+  
+  !objtype = !obj.objecttype()
+  
+  !sortuid = ||
+  
+  if !objtype eq |DBREF| then
+    
+    !elem = !obj
+    
+    if !elem.type eq |SPCO| or !elem.type eq |GPART| then
+      -- OK
+    else
+      RETURN ERROR 1 |Element have to be from type SPCO or GPART!|
+    endif
+    
+    !gtype = !elem.catref.gtype
+    handle any
+      RETURN ERROR 1 |Element has no GTYPE ?!?|
+    endhandle
+    
+    do !att value !this.sortid
+      
+      !val = ||
+      
+      if !att eq 'TYPE' then
+        !gtype = !elem.catref.gtype
+        if !gtype eq |TUBE| then
+          !gtype = |TUBI|
+        endif
+        !ind = !this.sorttypes[1].find(!gtype)
+        !val = !this.sorttypes[2][$!ind[1]]
+        handle any
+--          $P ERROR in SORT TYPE casting! - "$!gtype" is not known "ZZZZ" will be used!
+          if defined(!!errorlog) then
+            !info = |WARNING - SortID: "| + !elem.catref.name + |", Error in SORT TYPE casting! - GTYPE: "| + !gtype + |" is not known "ZZZZ" will be used!|
+            !!errorlog.append(!info)
+          endif
+          !val = |ZZZZ|
+        endhandle
+      elseif !att eq 'BORE' then
+        !p1 = !elem.ppbore[1].real().value().string('I4')
+        handle any
+          !p1 = |0000|
+        endhandle
+        !p2 = !elem.ppbore[2].real().value().string('I4')
+        handle any
+          !p2 = |0000|
+        endhandle
+        !p3 = !elem.ppbore[3].real().value().string('I4')
+        handle any
+          !p3 = |0000|
+        endhandle
+        !p4 = !elem.ppbore[4].real().value().string('I4')
+        handle any
+          !p4 = |0000|
+        endhandle
+        !val = !p1 + !p2 + !p3 + !p4
+      elseif !att eq 'STYP' then
+        !val = !elem.stype
+      elseif !att eq 'MTXX' then  
+        !val = !elem.mtxx
+        handle any
+          !val = |nomaterial|
+        endhandle
+      elseif !att eq 'SPEC' then
+        !val = !elem.ownlst[2].name
+      endif
+      
+      if !val.unset().not() then
+        !sortuid = !sortuid + !val
+      endif
+      
+    enddo  
+  
+  elseif !objtype eq |BOLTDATA| then
+    
+    !bolt = !obj
+    !sz = !bolt.spref.ownlst.size()
+    
+    !type = ||
+    !bsel = ||
+    
+    do !i from 3 to !sz
+      !quest = !bolt.spref.ownlst[$!i].question
+      if !quest eq |BTYP| then
+        !j = !i + 1
+        !type = !bolt.spref.ownlst[$!j].tanswer
+        handle(2,759)
+          !type = !bolt.spref.tanswer
+        endhandle
+        SKIP
+      endif
+      if !quest eq |BSEL| then
+        !j = !i + 1
+        !bsel = !bolt.spref.ownlst[$!j].tanswer
+        handle(2,759)
+          !bsel = !bolt.spref.tanswer
+        endhandle
+        if !bsel.unset() or !bsel.replace(| |,||) eq || then
+          !bsel = !bolt.spref.ownlst[$!j].answer.string()
+          handle(2,759)
+            !bsel = !bolt.spref.answer.string()
+           endhandle
+        endif
+        SKIP
+      endif
+    enddo
+    
+    if !type eq || then
+      RETURN ERROR 1 |No BTYP for bolt found!!|
+    endif
+    
+    !mtxt = !bolt.spref.matxt.xtext
+    handle any
+      !mtxt = ||
+    endhandle
+    
+    if !type.matchwild(|NUT*|) or !type.matchwild(|WAS*|) then
+      !sortuid = |ZBOLT| + !type + !bolt.boltDiameter.value().string('I3') + !bsel + !mtxt
+    else
+      !sortuid = |YBOLT| + !type + !bolt.boltDiameter.value().string('I3') + !bolt.boltLength.value().string('I3') + !bsel + !mtxt
+    endif
+    
+  else
+    !mess = |Unknown object type: | + !objtype
+    RETURN ERROR 1 |$!mess|
+  endif
+  
+  RETURN !sortuid
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getmtouid
+--
+-- Description: Get MTOUID for element
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getmtouid(!obj is ANY) is STRING
+  
+  !expobj = object expression()
+  !val = ||
+
+  !objtype = !obj.objecttype()
+
+  if !objtype eq |DBREF| then
+    
+    !elem = !obj
+    !spref = !elem.spref
+    
+    do !expr value !this.mtouid
+      !val.delete()
+      !expobj.expression(!expr)
+      !val = !expobj.evaluate(!elem)
+      !obt = !val.objecttype()
+      if !obt neq |STRING| then
+        !uid = !val.string()
+      else
+        !uid = !val
+      endif
+      if !uid.unset() or !uid.empty() or !uid.replace(| |,||) eq || or !uid.lowcase().trim() eq |unset| or !uid.lowcase().matchwild('*xxxx*') then
+        SKIP
+      else
+        BREAK
+      endif
+    enddo
+    
+  elseif !objtype eq |BOLTDATA| then
+    
+    !bolt = !obj
+    !sz = !bolt.spref.ownlst.size()
+    
+    do !i from 3 to !sz
+      !quest = !bolt.spref.ownlst[$!i].question
+      if !quest eq |BTYP| then
+        !j = !i + 1
+        !type = !bolt.spref.ownlst[$!j].tanswer
+        BREAK
+      endif
+    enddo
+    
+    if !type eq || then
+      RETURN ERROR 1 |No BTYP for bolt found!!|
+    endif
+    
+    if !type.matchwild(|NUT*|) or !type.matchwild(|WAS*|) then    
+      
+      -- try to get value by spref, cmpref, prtref, detref
+      do !uda value !this.clientUDA
+        
+        if !uda.upcase().trim() eq |SPREF| then
+          !val = !bolt.spref.name
+          BREAK
+        endif
+        
+        !val = !bolt.spref.$!uda
+        handle any
+        elsehandle none
+          if !val.unset() or !val.replace(| |,||) eq || then
+            -- go further
+          else
+            BREAK
+          endif
+        endhandle
+
+        !val = !bolt.cmpref.$!uda
+        handle any
+        elsehandle none
+          if !val.unset() or !val.replace(| |,||) eq || then
+            -- go further
+          else
+            BREAK
+          endif
+        endhandle
+
+        !val = !bolt.prtref.$!uda
+        handle any
+        elsehandle none
+          if !val.unset() or !val.replace(| |,||) eq || then
+            -- go further
+          else
+            BREAK
+          endif
+        endhandle
+
+        !val = !bolt.detref.$!uda
+        handle any
+        elsehandle none
+          if !val.unset() or !val.replace(| |,||) eq || then
+            -- go further
+          else
+            BREAK
+          endif
+        endhandle
+        
+      enddo
+      
+      if !val.unset() or !val.replace(| |,||) eq || then
+        
+--        $P Using SPREF for WAS / NUT
+        !val = !bolt.spref.name
+      	handle any
+      	  !errtxt = !!error.text
+          $P DEBUG:
+      	  $P $!errtxt
+      	  !val = ||
+        endhandle
+        
+        if !val.unset() or !val.replace(| |,||) eq || then
+          !mess = |Error at bolting MTOUID, could not get UID for WAS* / NUT* Element!|
+          
+          -- debug:
+          $P DEBUG:
+          !!check = !this.clientUDA
+          q var !!check
+          
+          RETURN ERROR 1 |$!mess|
+        endif
+        
+      endif
+      
+    else
+      -- get value by length table
+      -- get length table
+      
+      !spref = !bolt.spref
+      !btable = !spref.bltref.nstd.blength
+      !bindex = !btable.find(!bolt.boltlength)
+      if !bindex.unset() then
+        --  $P Boltlength not found in table - generating UID
+        if defined(!!errorlog) then
+          !info = |WARNING - Boltlength: "| + !spref.name + |", | + !bolt.boltlength.string() + | not found in table while generating UID!|
+          !!errorlog.append(!info)
+        endif
+        !val = !spref.name + |-| + !bolt.boltlength.string('I4')
+      else
+        !bin = !bindex[1]
+        
+        do !boltuda value !this.clientUDA
+          !boltmatno = array()
+          !val = ||
+          
+          do !bni from 1 to 10
+            !boltudaX = !boltuda + |$!bni|
+            !tmp = !spref.bltref.nstd.attribute(!boltudaX)
+            handle any
+              break
+            endhandle
+            !tmpa = !tmp.split()
+            if !tmpa.size() eq 0 then
+              break
+            endif
+            if !tmpa[1] eq |unset| then
+              break
+            endif
+            !boltmatno.appendarray(!tmpa)
+          enddo
+          
+          !val = !boltmatno[!bin]
+          handle any
+            SKIP
+          elsehandle none
+            if !val.unset() or !val.replace(| |,||) eq || or !val.trim().lowcase() eq |unset| then
+              SKIP
+            else
+              BREAK
+            endif
+          endhandle
+        enddo
+
+        if !val.unset() or !val.replace(| |,||) eq || or !val.trim().lowcase() eq |unset| then
+--          $P No ERP number found in table - generating UID
+          if defined(!!errorlog) then
+            !info = |WARNING - UID: "| + !spref.name + |", No ERP number found in table while generating UID!|
+            !!errorlog.append(!info)
+          endif
+          !val = !spref.name + |-| + !bolt.boltlength.string('I4')
+        endif
+        
+      endif
+      
+    endif
+    
+    !uid = !val
+    
+  else
+    !mess = |Unknown object type: | + !objtype
+    RETURN ERROR 1 |$!mess|    
+  endif
+  
+  
+  if !uid.lowcase().matchwild('*xxxx*') or !uid.replace(| |,||) eq || or !uid.unset() then
+
+    !sprefname = !spref.name
+    handle(2,751)
+      !sprefname = !bolt.spref.name
+      handle any
+        $P FATAL ERROR - UID using REFNO of Element not working!!
+      endhandle
+    endhandle
+    
+    if !uid.lowcase().matchwild('*xxxx*') then
+--      $P "xxxxxx" as UID found! - IGNORED - using SPREF
+      !info = |WARNING - UID: "| + !sprefname + |", "*xxxx*" as UID found - IGNORED - using SPREF|
+    else
+      !info = |WARNING - UID: "| + !sprefname + |", "Unset or Empty" UID found - IGNORED - using SPREF|
+    endif
+    
+    if defined(!!errorlog) then
+      !!errorlog.append(!info)
+    endif
+    
+    !uid = !elem.spref.name
+    handle(2,751)
+      !uid = !bolt.spref.name
+      handle any
+        $P FATAL ERROR - UID using REFNO of Element not working!!
+      endhandle
+    elsehandle any
+      
+--      $P ERROR - could not get SPREF as UID using REFNO of Elemente!!
+      if defined(!!errorlog) then
+        !info = |ERROR - Could not get SPREF as UID - Using REFNO of Element | + !elem.string()
+        !!errorlog.append(!info)
+      endif
+      
+      !uid = !elem.string()
+      handle any
+        $P FATAL ERROR - UID using REFNO of Element not working!!
+        if defined(!!errorlog) then
+          !info = |FATAL ERROR - UID using REFNO of Element not working!!|
+          !!errorlog.append(!info)
+        endif
+      endhandle
+      
+    endhandle
+    
+  endif
+  
+  
+  RETURN !uid
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getbolterpno
+--
+-- Description: Get MTOUID for element
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getbolterpno(!obj is ANY,!clientuda is STRING) is STRING
+  
+  !expobj = object expression()
+  !val = ||
+
+  !objtype = !obj.objecttype()
+  !boltmatno = ||
+
+  if !objtype eq |BOLTDATA| then
+    
+    !bolt = !obj
+    !sz = !bolt.spref.ownlst.size()
+    
+    do !i from 3 to !sz
+      !quest = !bolt.spref.ownlst[$!i].question
+      if !quest eq |BTYP| then
+        !j = !i + 1
+        !type = !bolt.spref.ownlst[$!j].tanswer
+        BREAK
+      endif
+    enddo
+    
+    if !type eq || then
+      RETURN ERROR 1 |No BTYP for bolt found!!|
+    endif
+    
+    if !type.matchwild(|NUT*|) or !type.matchwild(|WAS*|) then    
+      RETURN |notabolt|
+    else
+      -- get value by length table
+      -- get length table
+      
+      !spref = !bolt.spref
+      !btable = !spref.bltref.nstd.blength
+      !bindex = !btable.find(!bolt.boltlength)
+      if !bindex.unset() then
+--        $P Boltlength not found in table - generating UID
+        if defined(!!errorlog) then
+          !info = |WARNING - Boltlength: "| + !spref.name + |", | + !bolt.boltlength.string() + | not found in table while generating UID!|
+          !!errorlog.append(!info)
+        endif
+        !val = !spref.name + |-| + !bolt.boltlength.string('I4')
+      else
+        !bin = !bindex[1]
+
+        !erpnos = array()
+        !val = ||
+        
+        do !bni from 1 to 10
+          !boltudaX = !clientuda + |$!bni|
+          !tmp = !spref.bltref.nstd.attribute(!boltudaX)
+          handle any
+            break
+          endhandle
+          
+          !tmpa = !tmp.split()
+          if !tmpa.size() eq 0 then
+            break
+          endif
+          
+          if !tmpa[1] eq |unset| then
+             break
+          endif
+          
+          !erpnos.appendarray(!tmpa)
+          
+        enddo
+
+        !val = !erpnos[!bin]
+        handle any
+          !val = ||
+        elsehandle none
+          if !val.unset() or !val.replace(| |,||) eq || or !val.trim().lowcase() eq |unset| then
+            !val = ||
+          endif
+        endhandle
+        
+        !boltmatno = !val
+        
+      endif
+      
+    endif
+  else
+    RETURN |notabolt|
+  endif
+  
+  RETURN !boltmatno
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      copydata
+--
+-- Description: copy data from element to mtoline
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .copydata(!elem is ANY, !mtol is DBREF)
+  
+  !expobj = object expression()  
+  
+  if !elem.objecttype() eq |DBREF| then
+    
+    do !i index !this.mtoattr
+      !val.delete()
+      handle(2,751)
+      endhandle
+      
+      !attr = !this.mtoattr[$!i]
+      
+      !expr = !this.bmemattr[$!i]
+      !expobj.expression(!expr)
+      handle(2,849)
+        -- try to put data into attribute
+        !mtol.$!attr = !expr
+        handle any
+          !mtol.$!attr = !expr.replace(|'|,||)
+          handle any
+            !info = |WARNING - Attribute: "| + !attr + |", Expression $!expr is not valid.|
+            !!errorlog.append(!info)
+          endhandle
+          SKIP
+        endhandle
+        SKIP
+      endhandle
+      !val = !expobj.evaluate(!elem)
+      if !val.objecttype() neq |STRING| then
+        !text = !val.string()
+      else
+        !text = !val
+      endif
+      
+      if !text.unset() then
+        !text = ||
+        if defined(!!errorlog) then
+          !info = |WARNING - Attribute: "| + !attr + |", Object | + !elem.string() + | contains unset/invalid data.|
+          !!errorlog.append(!info)
+        endif
+      endif
+      
+      !mtol.$!attr = !text
+      handle(2,796)
+        -- $P (2,796) Cannot assign to attribute " $!attr ". Object contains unset/invalid data " $!text ".
+        if defined(!!errorlog) then
+          !info = |WARNING - Attribute: "| + !attr + |", (2,796) Cannot assign to attribute. Object contains unset/invalid data.|
+          !!errorlog.append(!info)
+        endif
+      elsehandle(2,794)
+        !real = object real(!text)
+        handle(2,808)
+          !real = 0
+        elsehandle(2,441)
+          -- can not convert string to real
+          if defined(!!errorlog) then
+            !info = |ERROR - Attribute: "| + !attr + |" - (2,441) Cannot assign "| + !text + |", convert STRING to REAL not possible!|
+            !!errorlog.append(!info)
+          else
+            $P $!info
+          endif
+        endhandle
+        !mtol.$!attr = !real
+        handle(2,796)
+          !real = 0
+          !mtol.$!attr = !real
+        endhandle
+      endhandle
+
+      -- new format unit setup:
+      !convert = false
+      !textU = ||
+
+      if !val.objecttype() eq |BORE| then
+        !convert = true
+        if !!mtoFormatHandler.useALLflag then
+          !textU = !val.string(!!mtoFormatHandler.ALL)
+          handle any
+          endhandle
+        else
+          !textU = !val.string(!!mtoFormatHandler.BORE)
+          handle any
+          endhandle
+        endif
+      endif
+      if !val.objecttype() eq |REAL| then
+        !convert = true
+        -- check if REAL has "BORE" in UDA name...
+        if !attr.upcase().matchwild(|*BORE*|) then
+          -- convert as bore!
+          if !!mtoFormatHandler.useALLflag then
+            !textU = !val.string(!!mtoFormatHandler.ALL)
+            handle any
+            endhandle
+          else
+            !textU = !val.string(!!mtoFormatHandler.BORE)
+            handle any
+            endhandle
+          endif
+        else
+          -- convert as length!
+          if !!mtoFormatHandler.useALLflag then
+            !textU = !val.string(!!mtoFormatHandler.ALL)
+            handle any
+            endhandle
+          else
+            !textU = !val.string(!!mtoFormatHandler.LENGTH)
+            handle any
+            endhandle
+          endif
+        endif
+      endif
+
+      -- try to write data:
+      if !convert and !textU neq || then
+        !attrU = !attr + |-UNIT|
+        !mtol.$!attrU = !textU
+        handle(2,796)
+          -- $P (2,796) Cannot assign to attribute " $!attrU ". Object contains unset/invalid data " $!textU ".
+          if defined(!!errorlog) then
+            !info = |WARNING - Attribute: "| + !attrU + |", (2,796) Cannot assign to attribute. Object contains unset/invalid data.|
+            !!errorlog.append(!info)
+          endif
+        elsehandle any
+        endhandle
+      endif
+
+    enddo
+    
+  elseif !elem.objecttype() eq |BOLTDATA| then
+    
+    
+    -- how to get UNC bolt?
+    !bore = |MM|
+    !distance = |MM|
+    
+    !tans = !elem.spref.tanswer
+    if !tans eq |UNC| then
+      !bore = |INCH|
+      !distance = |INCH|
+    else
+      -- DEBUG TEST auf METRISCH
+--      if !elem.spref.name.matchwild(|*.BOLT.SPEC.*|) then
+      if !elem.spref.name.matchwild(|*.UNC.*|) then
+        !bore = |INCH|
+        !distance = |INCH|
+      endif
+    endif
+        
+    !mtoBDiaFmt = object FORMAT()
+    !mtoBDiaFmt.dimension = 'L'
+    
+    if (!bore eq |MM|) then
+      !mtoBDiaFmt.units = 'MM'
+      !mtoBDiaFmt.dp = 0
+      !mtoBDiaFmt.label = 'mm'
+    else
+      !mtoBDiaFmt.units = 'INCH'
+      !mtoBDiaFmt.fraction = true
+      !mtoBDiaFmt.denominator = 16
+      !mtoBDiaFmt.inchSeparator = |.|
+      !mtoBDiaFmt.zeros = false
+      !mtoBDiaFmt.label = '"'
+    endif
+  
+    !mtoBLenFmt = object FORMAT()
+    !mtoBLenFmt.dimension = 'L'
+  
+    if (!distance eq |MM|) then
+      !mtoBLenFmt.units = 'MM'
+      !mtoBLenFmt.dp = 0
+      !mtoBLenFmt.label = 'mm'
+    else
+      !mtoBLenFmt.units = 'INCH'
+      !mtoBLenFmt.fraction = true
+      !mtoBLenFmt.denominator = 16
+      !mtoBLenFmt.inchSeparator = |.|
+      !mtoBLenFmt.zeros = false
+      !mtoBLenFmt.label = '"'
+    endif
+   
+    
+    !spco = !elem.spref
+    !bdia = !elem.boltDiameter.string(!mtoBDiaFmt)
+    !blen = !elem.boltLength.string(!mtoBLenFmt)
+    !bwei = !elem.boltWeight.string()
+
+    -- new format unit setup:
+    if !!mtoFormatHandler.useALLflag then
+      !bdiaUNIT = !elem.boltDiameter.string(!!mtoFormatHandler.ALL)
+      !blenUNIT = !elem.boltLength.string(!!mtoFormatHandler.ALL)
+    else
+      !bdiaUNIT = !elem.boltDiameter.string(!!mtoFormatHandler.BDIA)
+      !blenUNIT = !elem.boltLength.string(!!mtoFormatHandler.BLEN)
+    endif
+    
+    -- add prefix for UNC to filter in report
+    
+    if (!bore neq |MM|) then
+      !bdia = |UNC_FILTER_| + !bdia
+    endif
+    
+    
+    do !i index !this.mtoattr
+      !attr = !this.mtoattr[$!i]
+      !expr = !this.boltattr[$!i]
+      !val.delete()
+      handle(2,751)
+      endhandle
+      
+      !unit = false
+      if !expr eq |BDIA| then
+        !unit = true
+        !text = !bdia
+      elseif !expr eq |BLEN| then
+        !unit = true
+        !text = !blen
+      elseif !expr eq |BWEI| then
+        !text = !bwei
+      else
+        
+        -- get client uda data for bolts
+        if !attr.upcase().matchwild(|:MTO-ERPNO*|) then
+          !erpno = !this.getbolterpno(!elem,!expr)
+          if !erpno neq |notabolt| then
+            !mtol.$!attr = !erpno
+            SKIP
+          endif
+        endif
+        
+        -- other data
+        !expobj.expression(!expr)
+        handle(2,849)
+          -- try to put data into attribute
+          !mtol.$!attr = !expr
+          handle any
+            !mtol.$!attr = !expr.replace(|'|,||)
+            handle any
+              if !expr.matchwild(|UNC_FILTER_*|) then
+                SKIP
+              else
+                !info = |WARNING - Attribute: "| + !attr + |", Expression $!expr is not valid.|
+                !!errorlog.append(!info)
+              endif
+            endhandle
+            SKIP
+          endhandle
+          SKIP
+        endhandle
+
+        !val = !expobj.evaluate(!spco)
+        if !val.objecttype() neq |STRING| then
+          !text = !val.string()
+        else
+          !text = !val
+        endif
+      endif
+      
+      !mtol.$!attr = !text
+      handle(2,796)
+        -- $P (2,796) Cannot assign to attribute " $!attr ". Object contains unset/invalid data " $!text ".
+        if defined(!!errorlog) then
+          !info = |WARNING - Attribute: "| + !attr + |", (2,796) Cannot assign to attribute. Object contains unset/invalid data.|
+          !!errorlog.append(!info)
+        endif
+      elsehandle(2,794)
+        
+        if !text.matchwild(|UNC_FILTER_*|) then
+          !text = !text.replace(|UNC_FILTER_|,||)
+        endif
+        
+        !real = object real(!text)
+        handle(2,808)
+          !real = 0
+        endhandle
+        !mtol.$!attr = !real
+        handle(2,796)
+          !real = 0
+          !mtol.$!attr = !real
+        endhandle
+      endhandle
+
+      -- try to set "UNIT"
+      if !unit eq true then
+        if !expr eq |BDIA| then
+          !attrU = !attr + |-UNIT|
+          !textU = !bdiaUNIT
+        elseif !expr eq |BLEN| then
+          !attrU = !attr + |-UNIT|
+          !textU = !blenUNIT
+        endif
+        !mtol.$!attrU = !textU
+        handle(2,796)
+          -- $P (2,796) Cannot assign to attribute " $!attrU ". Object contains unset/invalid data " $!textU ".
+          if defined(!!errorlog) then
+            !info = |WARNING - Attribute: "| + !attrU + |", (2,796) Cannot assign to attribute. Object contains unset/invalid data.|
+            !!errorlog.append(!info)
+          endif
+        elsehandle any
+        endhandle
+      endif
+    enddo
+    
+  else
+    -- $P Object Type not defined in PML code !
+    if defined(!!errorlog) then
+      !otype = !elem.objecttype()
+      !info = |ERROR - Object Type "| + !otype + |" not defined in PML code !|
+      !!errorlog.append(!info)
+    endif
+  endif
+  
+endmethod

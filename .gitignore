@@ -1,0 +1,12 @@
+
+# Created by Herbert Zöchling for PML
+# do not ignore anything than zip and rar files!
+*.zip
+*.rar
+*.7z
+
+*.pdf
+
+pml.index
+# End
+pmllib/SupportTool/SupportsCustomerCode/pmlfnc/Test0001.pmlfnc

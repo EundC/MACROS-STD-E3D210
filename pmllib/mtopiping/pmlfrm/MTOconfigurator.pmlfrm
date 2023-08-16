@@ -1,0 +1,1668 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year AVEVA GmbH
+--
+-- File:            MTOconfigurator.pmlfrm
+--   Type:          Form Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        Design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/01 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Form for MTO managing 
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+import 'GridControl'
+handle any
+endhandle
+
+setup form !!MTOconfigurator at xr 0.25 yr 0.25 DIALOG DOCK
+  
+  title |AVEVA MTO Configurator|
+  
+-- Form members:
+  
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle    
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle    
+  
+  -- .Net control
+  member .mtouiddatalistGrid             is NETGRIDCONTROL
+  member .mtouiddatalistGridSelection    is ARRAY
+
+  member .mtomappdatalistGrid            is NETGRIDCONTROL
+  member .mtomappdatalistGridSelection   is ARRAY
+
+  -- Stack member
+  member .sortopt                        is ARRAY
+  member .sorttypes                      is ARRAY
+  member .udanames                       is ARRAY
+  
+  -- DB elements
+  member .mtoconfig                      is DBREF
+  member .mtoconfsort                    is DBREF
+  member .mtoconfuid                     is DBREF
+  member .mtoconfmapp                    is DBREF
+  
+  
+  frame .frame00 anchor all
+    path down
+    
+    para .ceconfig at xmin .frame00 + 0.5 ymin .frame00 anchor T + L width 30
+
+--    frame .frame0 tabset at xmin .frame00 + 0.5 ymin .frame00 + 0.0 anchor all
+    frame .frame0 tabset at xmin .frame00 + 0.5 ymax .ceconfig anchor all
+
+      frame .frame01 |Configurations|
+        list   .allconfig 'List of Configurations' anchor ALL at xmin .frame01 ymin .frame01 +0.5 SINGLE hei 12 width 80
+        button .newconf ' New Config  '  callback |!this.newconfig('empty')| anchor L + B  at xmin .allconfig    ymax .allconfig +0.5
+        button .cpconf  ' Copy Config '  callback |!this.newconfig('copy')|  anchor L + B  at xmax .newconf +1 ymin .newconf
+        button .modconf 'Mod Name/Desc'  callback |!this.modconfig()|  anchor L + B  at xmax .cpconf +1 ymin .newconf
+        button .delconf 'Delete Config'  callback |!this.delconfig()|  anchor L + B  at xmax .modconf +2 ymin .newconf
+      exit
+      
+      frame .frame1 |Sort Output|
+        
+        list .srtfld 'Fields' anchor L + T + B at xmin .frame1 ymin .frame1 +0.5 MULTI hei 15 width 10
+        
+        button .addfld pixmap hei 16 wid 16 callback |!this.modsort('add')| anchor L + T  at xmax .srtfld +1 ymin .srtfld +2
+        button .remfld pixmap hei 16 wid 16 callback |!this.modsort('rem')| anchor L + T  at xmin .addfld    ymax .addfld +1
+        
+        list .srtord 'Order' anchor L + T + B at xmax .addfld +1 ymin .frame1 +0.5 MULTI hei 15 width 10
+        button .ordup pixmap hei 16 wid 16 callback |!this.modsort('up')|   anchor L + T  at xmax .srtord +1 ymin .srtord +2
+        button .orddn pixmap hei 16 wid 16 callback |!this.modsort('down')| anchor L + T  at xmin .ordup    ymax .ordup +1
+
+        list .typord 'Types Order' anchor L + T + B at xmax .ordup +2 ymin .frame1 +0.5 MULTI hei 15 width 10
+        button .typup pixmap hei 16 wid 16 callback |!this.modtyp('up')|   anchor L + T  at xmax .typord +1 ymin .typord +2
+        button .typdn pixmap hei 16 wid 16 callback |!this.modtyp('down')| anchor L + T  at xmin .typup    ymax .typup +1
+        
+      exit
+      
+      frame .frame2 |UID Definition (Sum criteria)|
+        frame .frame21 'UID Definitions:' anchor all at xmin .frame2 ymin .frame2 height 10 width 40
+          container .mtouiddatalistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+        exit
+        button .newuid 'New ' pixmap hei 32 wid 32 callback |!this.uiddef('NEW')|    anchor R + T at xmax .frame21 +1 ymin .frame21 +1
+        button .deluid 'Del.' pixmap hei 32 wid 32 callback |!this.uiddef('DEL')|    anchor R + T at xmin .newuid  ymax .newuid +0.5
+      exit
+      
+      frame .frame3 |UDA Mapping (Keep MTO data)|
+        frame .frame31 'Mapping:' anchor all at xmin .frame3 ymin .frame3 height 10 width 40
+          container .mtomappdatalistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+        exit
+        button .newmap 'New ' pixmap hei 32 wid 32 callback |!this.mappdef('NEW')|    anchor R + T at xmax .frame31 +1 ymin .frame31 +1
+        button .copmap 'Copy' pixmap hei 32 wid 32 callback |!this.mappdef('COPY')|   anchor R + T at xmin .newmap  ymax .newmap +0.5
+        button .delmap 'Del.' pixmap hei 32 wid 32 callback |!this.mappdef('DEL')|    anchor R + T at xmin .newmap  ymax .copmap +0.5
+      exit
+      
+    exit
+    
+    button .cancel  ' EXIT ' tooltip 'Close Window (Content is lost)'  callback '!this.kill()'  at xmin .frame0  ymax .frame0 + 0.5 anchor L + B
+    button .hide    ' HIDE ' tooltip 'Close Window (Content will remain)' callback 'hide !!MTOconfigurator'  at xmax .frame0 - size ymin .cancel anchor R + B
+  exit
+
+
+exit
+
+handle any
+endhandle
+
+-- End of form definition for !!MTOconfigurator
+
+------------------------------------------------------------------------
+--
+-- Method:      MTOconfigurator
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .MTOconfigurator()
+  
+  !this.ceconfig.val = |*** Current Configuration ***|
+  
+  -- setup layout
+  !icrght16   =  !!pml.GETPATHNAME(|rightarrow16.png|)
+  !icleft16   =  !!pml.GETPATHNAME(|leftarrow16.png|)
+  !icup16     =  !!pml.GETPATHNAME(|uparrow16.png|)
+  !icdown16   =  !!pml.GETPATHNAME(|downarrow16.png|)
+  
+  !this.addfld.addpixmap(!icrght16)
+  !this.remfld.addpixmap(!icleft16)
+  !this.ordup.addpixmap(!icup16)
+  !this.orddn.addpixmap(!icdown16)
+
+  !this.typup.addpixmap(!icup16)
+  !this.typdn.addpixmap(!icdown16)
+  
+  
+  !icnew32  =  !!pml.GETPATHNAME(|avagmbhnew32.png|)
+  !iccopy32 =  !!pml.GETPATHNAME(|avagmbhcopy32.png|)
+--  !icedit32 =  !!pml.GETPATHNAME(|avagmbhedit32.png|)
+  !icdele32 =  !!pml.GETPATHNAME(|avagmbhdelete32.png|)
+
+  !this.newuid.addpixmap(!icnew32)
+  !this.deluid.addpixmap(!icdele32)
+  
+  !this.newmap.addpixmap(!icnew32)
+  !this.copmap.addpixmap(!iccopy32)
+  !this.delmap.addpixmap(!icdele32)
+  
+  !tmpce = !!ce
+  
+  !this.loadconfigs()
+  
+  !this.allconfig.callback = |!this.loadconfigselected()|
+  
+  !this.sortopt.clear()
+  !this.sortopt.append('SPEC')
+  !this.sortopt.append('TYPE')
+  !this.sortopt.append('BORE')
+  !this.sortopt.append('STYP')
+  !this.sortopt.append('MTXX')
+  
+  !this.sorttypes.clear()
+  !this.sorttypes.append('TUBI')
+  !this.sorttypes.append('BEND')
+  !this.sorttypes.append('FTUB')
+  !this.sorttypes.append('ELBO')
+  !this.sorttypes.append('TEE')
+  !this.sorttypes.append('CROS')
+  !this.sorttypes.append('OLET')
+  !this.sorttypes.append('REDU')
+  !this.sorttypes.append('COUP')
+  !this.sorttypes.append('PCOM')
+  !this.sorttypes.append('UNIO')
+  !this.sorttypes.append('FLEX')
+  !this.sorttypes.append('CAP')
+  !this.sorttypes.append('FLAN')
+  !this.sorttypes.append('LJSE')
+  !this.sorttypes.append('FBLI')
+  !this.sorttypes.append('GASK')
+  !this.sorttypes.append('VALV')
+  !this.sorttypes.append('VENT')
+  !this.sorttypes.append('VTWA')
+  !this.sorttypes.append('VFWA')
+  !this.sorttypes.append('TRAP')
+  !this.sorttypes.append('FILT')
+  !this.sorttypes.append('INST')
+  !this.sorttypes.append('ATTA')
+  !this.sorttypes.append('WELD')
+  
+--  !this.srtfld.dtext = !this.sortopt
+--  !this.srtfld.rtext = !this.sortopt
+  
+--  !this.typord.dtext = !this.sorttypes
+--  !this.typord.rtext = !this.sorttypes
+
+  -- load UDAs for MTOLINE
+  !tmp = array()
+  var !a coll all uda with matchwild(elelist num 1,'*:MTOLINE*')
+  !tmp.appendarray(!a)
+  var !a coll all uda with matchwild(elelist num 2,'*:MTOLINE*')
+  !tmp.appendarray(!a)
+  var !a coll all uda with matchwild(elelist num 3,'*:MTOLINE*')
+  !tmp.appendarray(!a)
+  
+  !tmp.sortunique()
+  !this.udanames.clear()
+  
+  do !i index !tmp
+    !uda = !tmp[$!i].dbref()
+    if !uda.owner.name.matchwild(|*SYSTEM|) then
+      -- ignore!
+      SKIP
+    else
+      !name = |:| + !uda.udname.upcase()
+      !this.udanames.append(!name)
+    endif
+  enddo
+  !this.udanames.sortunique()
+  
+  !this.loadsort()
+  !this.loadsorttypes()
+  
+  -- setup netgrid objects
+  !this.setupform()
+  !this.loadmtouids()
+  !this.loadmtomapps()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      kill
+--
+-- Description: kill form 
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      What will updated
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .kill()
+  
+  kill !!MTOconfigurator
+  
+endmethod
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+-- START .NET GRID HANDLING
+--
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+--
+-- Method:      setupform
+--
+-- Description: setup .NET grids (initial)
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setupform()
+  
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  
+  -- setup MTOGRP list
+  !this.mtouiddatalistGrid = object NETGRIDCONTROL()
+  
+  -- Add PML event handlers to .Net control
+--  !this.mtouiddatalistGrid.addeventhandler('OnPopup', !this, 'setPopUpMTOGRP')
+  !this.mtouiddatalistGrid.addeventhandler('AfterSelectChange', !this, 'dataselectUID')
+  !this.mtouiddatalistGrid.addeventhandler('BeforeCellUpdate', !this, 'dataupdateUID')
+  !this.mtouiddatalistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistUID')
+--  !this.mtouiddatalistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistMTOGRP')
+  
+  -- Add .Net control to PML container
+  !this.mtouiddatalistFrame.control = !this.mtouiddatalistGrid.handle()
+  
+   -- configure grid presentation
+--  !this.mtouiddatalistGrid.editableGrid(FALSE)
+  !this.mtouiddatalistGrid.editableGrid(TRUE)
+  !this.mtouiddatalistGrid.columnExcelFilter(TRUE)
+  !this.mtouiddatalistGrid.outlookGroupStyle(FALSE)
+  !this.mtouiddatalistGrid.fixedHeaders(FALSE)
+  !this.mtouiddatalistGrid.fixedRows(FALSE)
+  !this.mtouiddatalistGrid.errorIcon(TRUE)
+  !this.mtouiddatalistGrid.clearGrid()
+--  !this.mtouiddatalistGrid.singlerowselection(FALSE)
+  !this.mtouiddatalistGrid.singlerowselection(TRUE)
+  !this.mtouiddatalistGrid.columnSummaries(FALSE)
+  
+  
+  
+  -- setup MTOVERS list
+  !this.mtomappdatalistGrid = object NETGRIDCONTROL()
+  
+  -- Add PML event handlers to .Net control
+--  !this.mtomappdatalistGrid.addeventhandler('OnPopup', !this, 'setPopUpMTOVERS')
+  !this.mtomappdatalistGrid.addeventhandler('AfterSelectChange', !this, 'dataselectMAPP')
+  !this.mtomappdatalistGrid.addeventhandler('BeforeCellUpdate', !this, 'dataupdateMAPP')
+--  !this.mtomappdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'dataselectMTOVERS')
+  !this.mtomappdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistMAPP')
+  
+  -- Add .Net control to PML container
+  !this.mtomappdatalistFrame.control = !this.mtomappdatalistGrid.handle()
+  
+   -- configure grid presentation
+  !this.mtomappdatalistGrid.editableGrid(TRUE)
+  !this.mtomappdatalistGrid.columnExcelFilter(TRUE)
+  !this.mtomappdatalistGrid.outlookGroupStyle(FALSE)
+  !this.mtomappdatalistGrid.fixedHeaders(FALSE)
+  !this.mtomappdatalistGrid.fixedRows(FALSE)
+  !this.mtomappdatalistGrid.errorIcon(TRUE)
+  !this.mtomappdatalistGrid.clearGrid()
+--  !this.mtomappdatalistGrid.singlerowselection(FALSE)
+  !this.mtomappdatalistGrid.singlerowselection(TRUE)
+  !this.mtomappdatalistGrid.columnSummaries(FALSE)
+  
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataselectUID
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataselectUID(!data is ARRAY)
+  
+  -- Initialise data
+  !this.mtouiddatalistGridSelection.clear()
+
+  if !data[0].objecttype() eq |STRING| then
+    !element = !data[0].dbref()
+    !this.mtouiddatalistGridSelection.append(!element)
+  else
+    
+    -- Get selected elements
+    do !item values !data[0]
+      !element = !item.dbref()
+      !this.mtouiddatalistGridSelection.append(!element)
+    enddo
+    
+  endif
+  
+  !this.mtouiddatalistGrid.refreshtable()
+  !this.mtouiddatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      datasetlistUID
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .datasetlistUID(!data is ARRAY)
+  
+  -- Initialise data
+  !this.mtouiddatalistGridSelection.clear()
+
+  if !data[0].objecttype() eq |STRING| then
+    !element = !data[0].dbref()
+    !this.mtouiddatalistGridSelection.append(!element)
+  else
+    
+    -- Get selected elements
+    do !item values !data[0]
+      !element = !item.dbref()
+      !this.mtouiddatalistGridSelection.append(!element)
+    enddo
+    
+  endif
+  
+  if !data[1] eq |:MTOCONF-UID-ATTR| then
+    
+    !values = array()
+    do !uda value !this.udanames
+      if !uda.matchwild(|*MTO-ERPNO*|) then
+        !values.append(!uda)
+      endif
+    enddo
+    
+    !col = !this.mtouiddatalistGrid.GETCOLUMNPOSITION(':MTOCONF-UID-ATTR')
+    !this.mtouiddatalistGrid.CREATEVALUELIST('attribuid', !values)
+    !this.mtouiddatalistGrid.ASSIGNVALUELISTTOCOLUMN('attribuid', !col)
+    
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataupdateUID
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataupdateUID(!data is ARRAY)
+  
+  !tmpce = !!ce
+  
+  -- Initialise Variable
+  --# beforeCellUpdate
+  -- $P update
+  !data[3] = FALSE
+  !cesel = !data[1].dbref()
+  
+  if !data[2] eq |:MTOCONF-UID-SEQU| then
+    !val = !data[0].real()
+    if !val leq 0 then
+      RETURN
+    endif
+    
+    if !val gt !this.mtoconfuid.mcount then
+      !val = !this.mtoconfuid.mcount
+      !data[0] = !val.string('D0')
+    endif
+    
+    !oldval = !cesel.:MTOCONF-UID-SEQU
+    if !oldval eq !val then
+      !data[3] = TRUE
+      RETURN
+    elseif !oldval lt !val then
+      -- move back
+      !back = true
+    else
+      -- move forw
+      !back = false
+    endif
+    
+    do !mem value !this.mtoconfuid.member
+      if !cesel eq !mem then
+        !mem.:MTOCONF-UID-SEQU = !val
+      else
+        if !back then
+--          $P back
+          if !mem.:MTOCONF-UID-SEQU gt !val then
+            -- ignore
+            SKIP
+          elseif !mem.:MTOCONF-UID-SEQU leq !val then
+            if !mem.:MTOCONF-UID-SEQU lt !oldval then
+              SKIP
+            endif
+            !new = !mem.:MTOCONF-UID-SEQU - 1
+            !mem.:MTOCONF-UID-SEQU = !new
+          endif
+          
+        else
+--          $P forw
+          if !mem.:MTOCONF-UID-SEQU lt !val then
+            -- ignore
+            SKIP
+          elseif !mem.:MTOCONF-UID-SEQU geq !val then
+            if !mem.:MTOCONF-UID-SEQU gt !oldval then
+              SKIP
+            endif
+            !new = !mem.:MTOCONF-UID-SEQU + 1
+            !mem.:MTOCONF-UID-SEQU = !new
+          endif
+          
+        endif
+      endif
+    enddo
+    
+    !data[3] = TRUE
+    
+  else
+    
+    !chk = false
+    
+    -- check expression!!
+    !val = !data[0]
+    !exp = object expression(!val)
+    handle(2,849)
+      !test = |STR(| + !val.trim() + |)|
+      !exp = object expression(!test)
+      handle(2,849)
+        !data[4] = !!error.text + | : | + !val
+      elsehandle none  
+        !val = !test
+        !chk = true
+      endhandle
+    elsehandle none  
+      !chk = true
+    endhandle
+    
+    if !chk then
+      !cesel.:MTOCONF-UID-ATTR = !val
+      !data[3] = TRUE
+    else
+      -- keep wrong value in cell
+--      $!tmpce
+--      !this.mtouiddatalistGrid.ALLGRIDEVENTS(false)
+--      !this.mtouiddatalistGrid.SETSELECTEDCELLSVALUE(!val)
+--      !this.mtouiddatalistGrid.ALLGRIDEVENTS(true)
+--      RETURN
+      
+      $P
+      $P ----------------------------------------------
+      $P ERROR at Expression !! Try in commandline:
+      $P 
+      $P !exp = object expression('$!val')
+      $P
+      $P You can test output by:
+      $P q var !exp.evaluate(!!ce)
+      $P ----------------------------------------------
+      $P
+      
+    endif
+  endif
+  
+  !this.mtouiddatalistGrid.refreshtable()
+  if !data[2] eq |:MTOCONF-UID-SEQU| then
+    !this.mtouiddatalistGrid.SORTCOLUMNASCENDING(|:MTOCONF-UID-SEQU|)
+    !this.mtouiddatalistGrid.RESETCELLFEEDBACK()
+  endif
+  
+  $!tmpce
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataselectMAPP
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataselectMAPP(!data is ARRAY)
+  
+  -- Initialise data
+  !this.mtomappdatalistGridSelection.clear()
+
+  if !data[0].objecttype() eq |STRING| then
+    !element = !data[0].dbref()
+    !this.mtomappdatalistGridSelection.append(!element)
+  else
+    
+    -- Get selected elements
+    do !item values !data[0]
+      !element = !item.dbref()
+      !this.mtomappdatalistGridSelection.append(!element)
+    enddo
+    
+  endif
+  
+  !this.mtomappdatalistGrid.refreshtable()
+  !this.mtomappdatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      datasetlistMAPP
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .datasetlistMAPP(!data is ARRAY)
+
+  -- Initialise data
+  !this.mtomappdatalistGridSelection.clear()
+
+  if !data[0].objecttype() eq |STRING| then
+    !element = !data[0].dbref()
+    !this.mtomappdatalistGridSelection.append(!element)
+  else
+    
+    -- Get selected elements
+    do !item values !data[0]
+      !element = !item.dbref()
+      !this.mtomappdatalistGridSelection.append(!element)
+    enddo
+    
+  endif
+  
+  -- load :MTOLINE UDAs
+  
+  if !data[1] eq |:MTOCONF-MAPP-MTOATT| then
+    
+    var !m coll all PIPE with acttype eq |:MTOCONFMAPPFIELD| for $!this.mtoconfmapp
+    var !used eval :MTOCONF-MAPP-MTOATT for all from !m
+    
+    !values = array()
+    !values = !this.udanames.difference(!used)
+    
+    !col = !this.mtomappdatalistGrid.GETCOLUMNPOSITION(':MTOCONF-MAPP-MTOATT')
+    !this.mtomappdatalistGrid.CREATEVALUELIST('attrib', !values)
+    !this.mtomappdatalistGrid.ASSIGNVALUELISTTOCOLUMN('attrib', !col)
+    
+  endif
+  
+  -- load BOLTING DATA
+  if !data[1] eq |:MTOCONF-MAPP-BOLTATT| then
+    
+    !values = array()
+    !values.append(|BDIA|)
+    !values.append(|BLEN|)
+    !values.append(|BWEI|)
+    
+    !col = !this.mtomappdatalistGrid.GETCOLUMNPOSITION(':MTOCONF-MAPP-BOLTATT')
+    !this.mtomappdatalistGrid.CREATEVALUELIST('bolt', !values)
+    !this.mtomappdatalistGrid.ASSIGNVALUELISTTOCOLUMN('bolt', !col)
+    
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataupdateMAPP
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataupdateMAPP(!data is ARRAY)
+  
+  !tmpce = !!ce
+  
+  -- Initialise Variable
+  --# beforeCellUpdate
+  -- $P update
+
+  !data[3] = FALSE
+  
+  if !data[2] eq |:MTOCONF-MAPP-BMEMATT| or !data[2] eq |:MTOCONF-MAPP-BOLTATT| then
+    -- check expression
+    !chk = false
+    
+    -- check expression!!
+    !val = !data[0]
+    !exp = object expression(!val)
+    handle(2,849)
+      !test = |STR(| + !val.trim() + |)|
+      !exp = object expression(!test)
+      handle(2,849)
+        !data[4] = !!error.text + | : | + !val
+      elsehandle none  
+        !val = !test
+        !chk = true
+      endhandle
+    elsehandle none  
+      !chk = true
+    endhandle
+    
+    if !chk then
+      !data[3] = TRUE
+    else
+      $P
+      $P ----------------------------------------------
+      $P ERROR at Expression !! Try in commandline:
+      $P 
+      $P !exp = object expression('$!val')
+      $P
+      $P You can test output by:
+      $P q var !exp.evaluate(!!ce)
+      $P ----------------------------------------------
+      $P
+      RETURN
+    endif
+  endif
+  
+  !data[3] = TRUE
+  
+  $!data[1]
+  $!data[2] $!data[0]
+  handle(47,15)(47,50)(47,62)
+    $!data[2] '$!data[0]'
+    handle any
+      !data[4] = !!error.text
+      !data[3] = FALSE
+    endhandle
+  elsehandle any
+    !data[3] = FALSE
+  endhandle
+  
+  $!tmpce
+  
+endmethod
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+-- LOAD DATA METHODS
+--
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+--
+-- Method:      loadconfigs
+--
+-- Description: Load configs from DB to GUI
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadconfigs()
+  
+  -- load data
+  var !a coll all SITE with acttype eq |:MTOCONFIG|
+  if !a.unset() then
+    !!alert.error(|:MTOCONFIG (SITEs) not found!|)
+    RETURN
+  else
+    
+    var !nam eval name for all from !a
+    var !desc eval DESC for all from !a
+    var !dbwrit eval DBWRITE for all from !a
+    var !dbnam  eval DBNAME for all from !a
+    var !dbfile eval DBFILE for all from !a
+    
+    !col = array()
+    !col.append(!nam)
+    !col.append(!desc)
+    !col.append(!dbwrit)
+    !col.append(!dbnam)
+    !col.append(!dbfile)
+    
+    !head = array()
+    !head.append(|Name|)
+    !head.append(|Description|)
+    !head.append(|Access|)
+    !head.append(|DB Name|)
+    !head.append(|DB File|)
+    
+    
+    !this.allconfig.SETCOLUMNS(!col)
+    !this.allconfig.SETHEADINGS(!head)
+    !this.allconfig.RTEXT = !nam
+    
+    !site = !!ce.ownlst[1]
+    handle any
+      if !!ce.acttype eq |:MTOCONFIG| then
+        !site = !!ce
+      else
+        !site = =0/0
+      endif
+    endhandle
+    
+    if !site.badref().not() then
+      !cename = !site.name
+      !ind = !this.allconfig.RTEXT.find(!cename)
+      !i = !ind[1]
+      handle any
+        !i = 1
+      endhandle
+    else
+      !i = 1
+    endif
+    !this.allconfig.val = !i
+    
+    !this.loadconfigselected()
+    
+  endif
+  
+endmethod
+    
+------------------------------------------------------------------------
+--
+-- Method:      loadconfigselected
+--
+-- Description: Load selected config from DB to GUI
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadconfigselected()
+  
+  !tmpce = !!ce
+  
+  !refno = !this.allconfig.selection()
+  !this.mtoconfig = !refno.dbref()
+  
+  if !this.mtoconfig.isnamed then
+    !dtxt = |Current Config: | + !this.mtoconfig.namn
+  else
+    !dtxt = |Current Config: ":MTOCONFIG | + !this.mtoconfig.tysequ.string() + |"|
+  endif
+  
+  !this.ceconfig.val = !dtxt
+  
+  var !b coll all ZONE with acttype eq |:MTOCONFSORT| for $!this.mtoconfig
+  if !b.unset() then
+    $!this.mtoconfig
+    NEW :MTOCONFSORT
+    !this.mtoconfsort = !!ce
+  else
+    !this.mtoconfsort = !b[1].dbref()
+  endif
+  
+  var !b coll all ZONE with acttype eq |:MTOCONFUID| for $!this.mtoconfig
+  if !b.unset() then
+    $!this.mtoconfig
+    NEW :MTOCONFUID
+    !this.mtoconfuid = !!ce
+  else
+    !this.mtoconfuid = !b[1].dbref()
+  endif
+  
+  var !b coll all ZONE with acttype eq |:MTOCONFMAPP| for $!this.mtoconfig
+  if !b.unset() then
+    $!this.mtoconfig
+    NEW :MTOCONFMAPP
+    !this.mtoconfmapp = !!ce
+  else
+    !this.mtoconfmapp = !b[1].dbref()
+  endif
+   
+  $!tmpce
+  handle any
+  endhandle
+  
+  !this.loadsort()
+  !this.loadsorttypes()
+  
+  -- setup netgrid objects
+  !this.setupform()
+  !this.loadmtouids()
+  !this.loadmtomapps()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadsort
+--
+-- Description: Load sort from DB to GUI
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadsort()
+  
+  !all = !this.sortopt
+  !db = !this.mtoconfsort.:MTOCONF-SORT.split()
+  handle(2,754)
+    !db = array()
+  endhandle
+  
+  !diff = !all.difference(!db)
+  
+  !this.srtord.dtext = !db
+  !this.srtord.rtext = !db
+  
+  !this.srtfld.dtext = !diff
+  !this.srtfld.rtext = !diff
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadsorttypes
+--
+-- Description: Load sort types from DB to GUI
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadsorttypes()
+  
+  !all = !this.sorttypes
+  !db = !this.mtoconfsort.:MTOCONF-SORTTYPES.split()
+  handle(2,754)
+    !db = array()
+  endhandle
+  
+  !diff = !all.difference(!db)
+  !db.appendarray(!diff.sort())
+  
+  !this.typord.dtext = !db
+  !this.typord.rtext = !db
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:   loadmtouids
+--
+-- Description: Put MTOUIDs into the data grid
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .loadmtouids()
+
+  -- get selected rows
+  !selrows = !this.MTOUIDDATALISTGRID.GETSELECTEDROWTAGS()
+  
+  -- Clear any existing data
+  !this.mtouiddatalistGrid.clearGrid()
+  !this.mtouiddatalistGridSelection.clear()
+  
+  -- Set headings
+  !title = ':MTOUID'
+  !attributes = array()
+  !attributes.append(|REFNO|)
+  !attributes.append(|:MTOCONF-UID-SEQU|)
+  !attributes.append(|:MTOCONF-UID-ATTR|)
+  
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|Priority|)
+  !headings.append(|Attribute / Expression|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  var !uids coll all PIPE with ACTTYPE eq |:MTOCONFUIDFIELD| for $!this.mtoconfuid
+  handle(47,15)
+    !uids = array()
+  endhandle
+  
+  -- Get revisions
+  !nds = object NETDATASOURCE(!title, !attributes, !headings, !uids)
+  !this.mtouiddatalistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.mtouiddatalistGrid.autofitcolumns()
+  -- hide name and type
+  !this.mtouiddatalistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+  -- !this.mtouiddatalistGrid.SETGROUPBYCOLUMN(2,TRUE)
+  !this.mtouiddatalistGrid.SORTCOLUMNASCENDING(|:MTOCONF-UID-SEQU|)
+  
+  !this.mtouiddatalistGrid.refreshtable()
+  !this.mtouiddatalistGrid.autofitcolumns()
+  
+  -- update gui (open all groups...)
+  !sz = !this.mtouidDATALISTGRID.GETNUMBERROWS()
+  do !i from 1 to !sz
+    !this.mtouidDATALISTGRID.CLEARROWSELECTION()
+    !this.mtouidDATALISTGRID.SELECTROW($!i)
+    handle any
+    endhandle
+    !this.mtouidDATALISTGRID.SETROWCOLOR($!i,'white')
+  enddo
+  
+  !this.mtouidDATALISTGRID.CLEARROWSELECTION()
+  
+  !this.mtouidDATALISTGRID.SETSELECTEDROWTAGS(!selrows)
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   loadmtomapps
+--
+-- Description: Put MTO UDA Mapping into the data grid
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .loadmtomapps()
+
+  -- get selected rows
+  !selrows = !this.mtomappDATALISTGRID.GETSELECTEDROWTAGS()
+  
+  -- Clear any existing data
+  !this.mtomappdatalistGrid.clearGrid()
+  !this.mtomappdatalistGridSelection.clear()
+  
+  -- Set headings
+  !title = ':MTOUID'
+  !attributes = array()
+  !attributes.append(|REFNO|)
+  !attributes.append(|:MTOCONF-MAPP-MTOATT|)
+  !attributes.append(|:MTOCONF-MAPP-BMEMATT|)
+  !attributes.append(|:MTOCONF-MAPP-BOLTATT|)
+
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|MTOLINE UDA|)
+  !headings.append(|BMEM Att./Expr.|)
+  !headings.append(|BOLT Att./Expr.|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  var !uids coll all PIPE with ACTTYPE eq |:MTOCONFMAPPFIELD| for $!this.mtoconfmapp
+  handle(47,15)
+    !uids = array()
+  endhandle
+  
+  -- Get revisions
+  !nds = object NETDATASOURCE(!title, !attributes, !headings, !uids)
+  !this.mtomappdatalistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.mtomappdatalistGrid.autofitcolumns()
+  -- hide name and type
+  !this.mtomappdatalistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+  -- !this.mtomappdatalistGrid.SETGROUPBYCOLUMN(2,TRUE)
+  
+  !this.mtomappdatalistGrid.refreshtable()
+  !this.mtomappdatalistGrid.autofitcolumns()
+  
+  -- update gui (open all groups...)
+  !sz = !this.mtomappDATALISTGRID.GETNUMBERROWS()
+  do !i from 1 to !sz
+    !this.mtomappDATALISTGRID.CLEARROWSELECTION()
+    !this.mtomappDATALISTGRID.SELECTROW($!i)
+    handle any
+    endhandle
+    !this.mtomappDATALISTGRID.SETROWCOLOR($!i,'white')
+  enddo
+  
+  !this.mtomappDATALISTGRID.CLEARROWSELECTION()
+  
+  !this.mtomappDATALISTGRID.SETSELECTEDROWTAGS(!selrows)
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+--
+--  MODIFICATION METHODS
+--
+------------------------------------------------------------------------
+------------------------------------------------------------------------
+$(
+        button .newconf ' New Config  '  callback |!this.newconfig('empty')| anchor L + B  at xmin .allconfig    ymax .allconfig +0.5
+        button .cpconf  ' Copy Config '  callback |!this.newconfig('copy')|  anchor L + B  at xmax .newconf +1 ymin .newconf
+        button .modconf 'Mod Name/Desc'  callback |!this.modconfig()|  anchor L + B  at xmax .cpconf +1 ymin .newconf
+        button .delconf 'Delete Config'  callback |!this.delconfig()|  anchor L + B  at xmax .modconf +2 ymin .newconf
+$)
+
+------------------------------------------------------------------------
+--
+-- Method:   newconfig
+--
+-- Description: Create new config
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Action
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .newconfig(!action is STRING)
+  
+  !tmpce = !!ce
+  
+  !dbnam = !!ce.dbname
+  !dbfile = !!ce.dbfile
+  if !!ce.dbwrite eq TRUE then
+    if !action eq |copy| then
+      !quest = |Create copy of | + !this.mtoconfig.name + | in new :MTOCONFIG // DB: | + !dbnam + | - | + !dbfile + | ?|
+    else
+      !quest = |Do you really want to create a :MTOCONFIG in DB: | + !dbnam + | - | + !dbfile + | ?|
+    endif
+    !ans = !!alert.confirm(!quest)
+    if !ans eq |YES| then
+      -- OK
+      NEW :MTOCONFIG
+      !conf = !!ce
+      
+      if !action eq |copy| then
+        COPY $!this.mtoconfig
+      endif
+      
+    else
+      RETURN
+    endif
+  else
+    !!alert.error(|You have NO WRITE ACCESS for CE!|)
+    RETURN
+  endif
+  
+  show !!MTOmodConfigDesc
+  !!MTOmodConfigDesc.load(!conf)
+  !!MTOmodConfigDesc.tmpce = !tmpce
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   modconfig
+--
+-- Description: modify config
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Action
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .modconfig()
+  
+  !tmpce = !!ce
+  
+  show !!MTOmodConfigDesc
+  !!MTOmodConfigDesc.load(!this.mtoconfig)
+  !!MTOmodConfigDesc.tmpce = !tmpce
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   delconfig
+--
+-- Description: delete config
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Action
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .delconfig()
+  
+  !tmpce = !!ce
+  
+  if !this.mtoconfig.dbwrite neq TRUE then
+    !!alert.error(|You have NO WRITE ACCESS to this DB!!|)
+    RETURN
+  endif
+  
+  !ans = !!alert.confirm(|Do you really want to delete :MTOCONFIG | + !this.mtoconfig.name + |? No futher Version could be created, for MTOs using this Config!!|)
+  if !ans eq |YES| then
+    $!this.mtoconfig
+    DELETE :MTOCONFIG
+  else
+    RETURN
+  endif
+  
+  $!tmpce
+  handle any
+  endhandle
+  
+  !this.loadconfigs()
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   modsort
+--
+-- Description: Modify SORT criteria
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Modify action
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .modsort(!action is STRING)
+  
+  !tmpce = !!ce
+  
+  !choosecrit = !this.srtfld.dtext
+  !selcrit = !this.srtord.dtext
+  
+  !reselect = array()
+  
+  if !action eq |add| then
+    !sel = !this.srtfld.selection()
+    !selcrit.appendarray(!sel)
+    !this.srtord.dtext = !selcrit
+    !diff = !choosecrit.difference(!sel)
+    !this.srtfld.dtext = !diff
+  elseif !action eq |rem| then
+    !sel = !this.srtord.selection()
+    !choosecrit.appendarray(!sel)
+    !choosecrit.sort()
+    !this.srtfld.dtext = !choosecrit
+    !new = array()
+    do !val value !selcrit
+      !ind = !sel.find(!val)
+      if !ind.unset() then
+        !new.append(!val)
+      endif
+    enddo
+    !this.srtord.dtext = !new
+  elseif !action eq |up| then
+    !sel = !this.srtord.selection()
+    !reselect = !sel
+    if !sel.size() gt 1 then
+      -- move to top
+      !new = array()
+      do !val value !selcrit
+        !ind = !sel.find(!val)
+        if !ind.unset() then
+          !new.append(!val)
+        endif
+      enddo
+      !sel.appendarray(!new)
+      !this.srtord.dtext = !sel
+    else
+      -- move 1 step
+      !new = array()
+      do !val value !selcrit
+        !ind = !sel.find(!val)
+        if !ind.unset() then
+          !new.append(!val)
+        else
+          !last = !new.removelast()
+          handle any
+            !new.append(!val)
+          elsehandle none
+            !new.append(!val)
+            !new.append(!last)
+          endhandle
+        endif
+      enddo
+      !this.srtord.dtext = !new
+    endif
+  elseif !action eq |down| then
+    !sel = !this.srtord.selection()
+    !reselect = !sel
+    if !sel.size() gt 1 then
+      -- move to bottom
+      !new = array()
+      do !val value !selcrit
+        !ind = !sel.find(!val)
+        if !ind.unset() then
+          !new.append(!val)
+        endif
+      enddo
+      !new.appendarray(!sel)
+      !this.srtord.dtext = !new
+    else
+      -- move 1 step
+      !new = array()
+      !j = 0
+      do !i index !selcrit
+        !j = !j + 1
+        !val = !selcrit[$!j]
+        handle any
+          BREAK
+        endhandle
+        !ind = !sel.find(!val)
+        if !ind.unset() then
+          !new.append(!val)
+        else
+          !n = !j + 1
+          !next = !selcrit[$!n]
+          handle any
+          elsehandle none
+            !new.append(!next)
+            !j = !j + 1
+          endhandle
+          !new.append(!val)
+        endif
+      enddo
+      !this.srtord.dtext = !new
+    endif
+  endif
+  
+  if !action eq |up| or !action eq |down| then
+    !selval = array()
+    do !r value !reselect
+      !ind = !this.srtord.dtext.find(!r)
+      if !ind.unset().not() then
+        !selval.append(!ind[1])
+      endif
+    enddo
+    
+   !this.srtord.val = !selval
+  endif
+  
+  !srtsrting = ||
+  do !str value !this.srtord.dtext
+    !srtsrting = !srtsrting + | | + !str
+  enddo
+  
+  !this.mtoconfsort.:MTOCONF-SORT = !srtsrting.trim()
+  
+  -- !this.loadsort()
+  
+  $!tmpce
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   modtyp
+--
+-- Description: Modify TYPE sort order
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Modify action
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .modtyp(!action is STRING)
+  
+  !tmpce = !!ce
+
+  !order = !this.typord.dtext
+  
+  !reselect = array()
+  
+  if !action eq |up| then
+    !sel = !this.typord.selection()
+    !reselect = !sel
+    if !sel.size() gt 1 then
+      -- move to top
+      !new = array()
+      do !val value !order
+        !ind = !sel.find(!val)
+        if !ind.unset() then
+          !new.append(!val)
+        endif
+      enddo
+      !sel.appendarray(!new)
+      !this.typord.dtext = !sel
+    else
+      -- move 1 step
+      !new = array()
+      do !val value !order
+        !ind = !sel.find(!val)
+        if !ind.unset() then
+          !new.append(!val)
+        else
+          !last = !new.removelast()
+          handle any
+            !new.append(!val)
+          elsehandle none
+            !new.append(!val)
+            !new.append(!last)
+          endhandle
+        endif
+      enddo
+      !this.typord.dtext = !new
+    endif
+  elseif !action eq |down| then
+    !sel = !this.typord.selection()
+    !reselect = !sel
+    if !sel.size() gt 1 then
+      -- move to bottom
+      !new = array()
+      do !val value !order
+        !ind = !sel.find(!val)
+        if !ind.unset() then
+          !new.append(!val)
+        endif
+      enddo
+      !new.appendarray(!sel)
+      !this.typord.dtext = !new
+    else
+      -- move 1 step
+      !new = array()
+      !j = 0
+      do !i index !order
+        !j = !j + 1
+        !val = !order[$!j]
+        handle any
+          BREAK
+        endhandle
+        !ind = !sel.find(!val)
+        if !ind.unset() then
+          !new.append(!val)
+        else
+          !n = !j + 1
+          !next = !order[$!n]
+          handle any
+          elsehandle none
+            !new.append(!next)
+            !j = !j + 1
+          endhandle
+          !new.append(!val)
+        endif
+      enddo
+      !this.typord.dtext = !new
+    endif
+  endif
+  
+  !selval = array()
+  do !r value !reselect
+    !ind = !this.typord.dtext.find(!r)
+    if !ind.unset().not() then
+      !selval.append(!ind[1])
+    endif
+  enddo
+    
+ !this.typord.val = !selval
+  
+  !srtsrting = ||
+  do !str value !this.typord.dtext
+    !srtsrting = !srtsrting + | | + !str
+  enddo
+  
+  !this.mtoconfsort.:MTOCONF-SORTTYPES = !srtsrting.trim()
+  
+  -- !this.loadsort()
+  
+  $!tmpce
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   uiddef
+--
+-- Description: Create , Delete UID Definition
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Modify action
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .uiddef(!action is STRING)
+  
+  !tmpce = !!ce
+  
+  !sel = !this.mtouiddatalistGridSelection
+  
+  !sprefmess = false
+  
+  if !action eq |NEW| then
+    $!this.mtoconfuid
+    LAST MEM
+    handle any
+    endhandle
+    NEW :MTOCONFUIDFIELD
+    !!ce.:MTOCONF-UID-SEQU = !!ce.tysequ
+  elseif !action eq |DEL| then
+    !att = array()
+    do !cemem value !this.mtoconfuid.member
+      !att.append(!cemem.:MTOCONF-UID-ATTR.trim().upcase())
+    enddo
+    !spref = !att.find('SPREF')
+
+    do !s value !sel
+      $!s
+      if !s.:MTOCONF-UID-ATTR.trim().upcase() eq |SPREF| then
+        if !spref.size() leq 1 then
+          !sprefmess = true
+          SKIP
+        else
+          !spref.removelast()
+        endif
+      endif
+      DELETE :MTOCONFUIDFIELD
+    enddo
+    
+    !seq = array()
+    !mem = array()
+    do !cemem value !this.mtoconfuid.member
+      !seq.append(!cemem.:MTOCONF-UID-SEQU)
+      !mem.append(!cemem)
+    enddo
+    
+    !sort = !seq
+    !sort.sort().invert()
+    
+    $!this.mtoconfuid
+    do !s value !sort
+      !ind = !seq.find(!s)
+      REORDER $!mem[$!ind[1]] before 1
+    enddo
+
+    do !cemem value !this.mtoconfuid.member
+      !cemem.:MTOCONF-UID-SEQU = !cemem.tysequ
+    enddo
+  endif
+  
+  !this.loadmtouids()
+  
+  $!tmpce
+  handle any
+  endhandle
+  
+  if !sprefmess then
+    !!alert.message(|You are not allowed to delete SPREF. At least 1 SPREF definiton have to remain!|)
+  endif
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   mappdef
+--
+-- Description: Create , Copy , Delete MAPP Definition
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Modify action
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .mappdef(!action is STRING)
+  
+  !tmpce = !!ce
+  
+  !sel = !this.mtomappdatalistGridSelection
+  
+  if !action eq |NEW| then
+    $!this.mtoconfmapp
+    LAST MEM
+    handle any
+    endhandle
+    NEW :MTOCONFMAPPFIELD
+  elseif !action eq |DEL| then
+    do !s value !sel
+      $!s
+      DELETE :MTOCONFMAPPFIELD
+    enddo
+  elseif !action eq |COPY| then
+    do !s value !sel
+      $!s
+      NEW :MTOCONFMAPPFIELD COPY PREV
+    enddo
+  endif
+  
+  !this.loadmtomapps()
+  
+  $!tmpce
+  handle any
+  endhandle
+  
+endmethod
+-- End of method definition

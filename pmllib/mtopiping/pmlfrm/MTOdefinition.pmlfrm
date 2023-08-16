@@ -1,0 +1,2115 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year AVEVA GmbH
+--
+-- File:            MTOdefinition.pmlfrm
+--   Type:          Form Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        Design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/01 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Form for MTO managing 
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+import 'GridControl'
+handle any
+endhandle
+
+-- setup form !!MTOdefinition at xr 0.25 yr 0.25 DIALOG DOCK
+setup form !!MTOdefinition at xr 0.25 yr 0.25 DIALOG RESIZE
+  
+  title |AVEVA Modify MTO Definition|
+  
+-- Form members:
+  
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle    
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle    
+  
+  -- .Net control
+  member .mtosourcedatalistGrid             is NETGRIDCONTROL
+  member .mtosourcedatalistGridSelection    is ARRAY
+
+  member .mtofilterdatalistGrid             is NETGRIDCONTROL
+  member .mtofilterdatalistGridSelection    is ARRAY
+
+  -- Stack member
+  member .mtodef                            is DBREF
+  member .source                            is DBREF
+  
+  -- Load attribute list from file
+  member .attlist                           is ARRAY
+  
+  member .modifyflag                        is BOOLEAN
+  
+  -- which Unit is selected
+  member .testUnitSelect                    is STRING
+  member .testFormat                        is FORMAT
+  member .resetFields                       is BOOLEAN
+
+  -- use !!mtoFormatHandler for UNITs
+
+  frame .frame00 anchor all
+    path down
+
+    frame .frame0 tabset at xmin .frame00 + 0.5 ymin .frame00 anchor all    
+      frame .frame01 'Output Definition'
+        frame .frame11 'General'
+          para .pdesc anchor T + L at xmin .frame11 ymin .frame11 text 'Description:'
+          text .desc  anchor T + L at xmin .pdesc ymax .pdesc width 52 is STRING
+          para .pfunc anchor T + L at xmin .pdesc ymax .desc text 'Prefix Outputfiles:'
+          text .func  anchor T + L at xmin .pfunc ymax .pfunc width 52 is STRING
+
+          para .pdocu anchor T + L at xmin .pdesc ymax .func text 'Document No:'
+          text .docu  anchor T + L at xmin .pdocu ymax .pdocu width 52 is STRING
+
+          para .pgen1 anchor T + L at xmin .pdesc ymax .docu text 'Client Doc. No:'
+          text .tgen1  anchor T + L at xmin .pdocu ymax .pgen1 width 52 is STRING
+
+          para .pgen2 anchor T + L at xmin .pdesc ymax .tgen1 text 'Spare 1:'
+          text .tgen2  anchor T + L at xmin .pdocu ymax .pgen2 width 52 is STRING
+
+          para .pgen3 anchor T + L at xmin .pdesc ymax .tgen2 text 'Spare 2:'
+          text .tgen3  anchor T + L at xmin .pdocu ymax .pgen3 width 52 is STRING
+          
+          para .pconf anchor T + L at xmin .pdesc ymax .tgen3 text 'Configuration:'
+          option .config at xmin .pdesc ymax .pconf width 50
+          
+        exit
+        
+        frame .frame12 'Output' at xmin .frame11 ymax .frame11 +1
+          toggle .tmtoc 'use MTOC, MTOT(H)'        anchor T + L at xmin .frame12 ymin .frame12 tagwid 20
+          toggle .tbolt 'include Bolts'            anchor T + L at xmin .tmtoc ymax .tmtoc tagwid 20
+          toggle .tbend 'add BENDs to TUBE'        anchor T + L at xmin .tmtoc ymax .tbolt tagwid 20
+          toggle .tweld 'include WELD'             anchor T + L at xmin .tmtoc ymax .tbend tagwid 20
+          toggle .tatta 'include ATTA'             anchor T + L at xmin .tmtoc ymax .tweld tagwid 20
+          toggle .tftub 'use FTUB Length for UID'  anchor T + L at xmin .tmtoc ymax .tatta tagwid 20
+        exit
+        
+        frame .frame13 'MTO Types' at xmax .frame12 +1 ymin .frame12
+          toggle .tpipe 'Pipe MTOs'   anchor T + L at xmin .frame13 ymin .frame13 tagwid 8
+          toggle .tsumm 'Summary MTO' anchor T + L at xmin .tpipe ymax .tpipe tagwid 10
+          toggle .tspec 'Spec MTOs'   anchor T + L at xmin .tpipe ymax .tsumm tagwid 10
+          
+          toggle .tpsort 'sort by Hierarchy'   anchor T + L at xmax .tpipe ymin .tpipe tagwid 15
+        exit
+        
+        frame .frame14 'Options' at xmin .frame13 ymax .frame13 +0.25
+          toggle .tkeepDel 'Keep Positions with 0 qty'        anchor T + L at xmin .frame14 ymin .frame14 tagwid 20
+        exit
+
+        frame .radioSikla  'SIKLA Options' at xmin .frame12 ymax .frame12 +0.25
+          rtoggle .radSiklaOn   'Include SIKLA '          at xmin .radioSikla    ymin .radioSikla  tagwid 12
+          rtoggle .radSiklaOff  'Exclude SIKLA'           at xmax .radSiklaOn    ymin .radSiklaOn  tagwid 12
+          rtoggle .radSiklaOnly 'SIKLA ONLY!'             at xmax .radSiklaOff   ymin .radSiklaOn  tagwid 12
+          -- rtoggle .radSiklaOff  'Exclude SIKLA'           at xmin .radioSikla ymax .radSiklaOn  tagwid 20
+          -- rtoggle .radSiklaOnly 'SIKLA ONLY!'             at xmin .radioSikla ymax .radSiklaOff tagwid 20
+        exit
+
+      exit
+    
+      frame .frame02 'Source Definition' anchor ALL
+        -- mtogrp source
+        frame .frame2 'Source' anchor ALL
+          frame .frame21 '' anchor all at xmin .frame2 ymin .frame2 -0.25 height 9 width 50
+            container .mtosourcedatalistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+          exit
+          button .newsrc  'New ' pixmap hei 32 wid 32 callback |!this.mtosource('NEW')|    anchor R + T at xmax .frame21 +1 ymin .frame21 +1
+          button .newsrcm 'Mem ' pixmap hei 32 wid 32 callback |!this.mtosource('MEM')|    anchor R + T at xmin .newsrc  ymax .newsrc +0.5
+          button .delsrc  'Del.' pixmap hei 32 wid 32 callback |!this.mtosource('DEL')|    anchor R + T at xmin .newsrc  ymax .newsrcm +0.5
+        exit
+
+        -- mtogrp filter
+        frame .frame3 'Filter' anchor B + R + L
+          frame .frame31 '' anchor all at xmin .frame3 ymin .frame3 -0.25 height 9 width 50
+            container .mtofilterdatalistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+          exit
+          button .newflt 'New ' pixmap hei 32 wid 32 callback |!this.mtofilter('NEW')|           anchor R + T at xmax .frame31 +1 ymin .frame31 +0.5
+          button .modflt 'Mod.' toggle pixmap hei 32 wid 32 callback |!this.mtofilter('MOD')|    anchor R + T at xmin .newflt  ymax .newflt +0.5
+          button .delflt 'Del.' pixmap hei 32 wid 32 callback |!this.mtofilter('DEL')|           anchor R + T at xmin .newflt  ymax .modflt +0.5
+        exit
+      exit
+      frame .frame03 'Units, Welds' anchor ALL
+        frame .frame031 'Units / Format' anchor T + R + L at xmin .frame03 ymin .frame03
+          frame .frame0311 'Settings:' anchor T + L at xmin .frame031 ymin .frame031
+            -- Bore & Length & Bolt Diameter & Length
+            para .ufhead1 at xmin .frame0311 ymin .frame0311 -0.25 text 'Type'   width 6
+            para .ufhead2 at xmax .ufhead1  ymin .ufhead1  text 'System' width 9
+            para .ufhead3 at xmax .ufhead2  ymin .ufhead1  text 'Test value' width 9
+            para .ufhead4 at xmax .ufhead3  ymin .ufhead1  text 'Test output' width 8
+
+            para   .ppipe    at xmin .ufhead1 ymax .ufhead1 text 'Piping:'
+
+            para   .pbore    at xmin .ufhead1 ymax .ppipe text 'Bore'
+            option .obore    at xmin .ufhead2 ymin .pbore width 5
+            text   .testbore at xmin .ufhead3 ymin .pbore width 7 is BORE
+            text   .outbore  at xmin .ufhead4 ymin .pbore width 7 is STRING
+
+            para   .plength    at xmin .ufhead1 ymax .pbore text 'Length'
+            option .olength    at xmin .ufhead2 ymin .plength width 5
+            text   .testlength at xmin .ufhead3 ymin .plength width 7 is STRING
+            text   .outlength  at xmin .ufhead4 ymin .plength width 7 is STRING
+
+            para   .pbolt    at xmin .ufhead1 ymax .plength text 'Bolting:'
+
+            para   .pbdia    at xmin .ufhead1 ymax .pbolt text 'Diam.'
+            option .obdia    at xmin .ufhead2 ymin .pbdia width 5
+            text   .testbdia at xmin .ufhead3 ymin .pbdia width 7 is STRING
+            text   .outbdia  at xmin .ufhead4 ymin .pbdia width 7 is STRING
+
+            para   .pblen    at xmin .ufhead1 ymax .pbdia text 'Length'
+            option .oblen    at xmin .ufhead2 ymin .pblen width 5
+            text   .testblen at xmin .ufhead3 ymin .pblen width 7 is STRING
+            text   .outblen  at xmin .ufhead4 ymin .pblen width 7 is STRING
+
+            para   .pPartu    at xmin .ufhead1 ymax .pblen +0.4 text 'Piece label:' width 9
+            text   .pcsLabel  at xmax .pPartu  ymin .pPartu width 7 is STRING
+
+          exit
+          frame .frame0312 'Modify Format:' anchor T + R at xmax .frame0311 + 1 ymin .frame031
+            option .oformatsel    at xmin .frame0312 +0.5 ymin .frame0312  width 16
+
+            !pfwidth = 10
+            para .pformat1 at xmin .oformatsel  ymax .oformatsel +0.25 text 'Units:' width $!pfwidth
+            para .pformat2 at xmin .pformat1    ymax .pformat1 text 'Denominator:'   width $!pfwidth
+            para .pformat3 at xmin .pformat1    ymax .pformat2 text 'Decimals:'      width $!pfwidth
+            -- wide layout
+            option .ofunits   at xmax .pformat1 ymin .pformat1 width 6
+            text   .fdenom    at xmin .ofunits  ymin .pformat2 width 8 is REAL
+            text   .fdecim    at xmin .ofunits  ymin .pformat3 width 8 is REAL
+
+            text .fftlab   at xmin .pformat1  ymax .pformat3 width 2 is STRING
+            para .pformat4 at xmax .fftlab    ymin .fftlab   text 'FT Label'      width 6
+            text .finsep   at xmax .pformat4  ymin .fftlab   width 2 is STRING
+            para .pformat5 at xmax .finsep    ymin .fftlab   text 'Inch Sepa.'      width 7
+
+            toggle .ffract 'Fraction'      at xmin .pformat1  ymax .fftlab +0.25 tagwid 6
+            toggle .fpadfr 'Pad Fraction'  at xmax .ffract    ymin .ffract       tagwid 9
+            
+            para   .pformat6 at xmin .pformat1  ymax .ffract -0.1 text 'Zeros:' width 5
+            toggle .ftrazo 'trailing' at xmax .pformat6  ymin .pformat6 tagwid 5
+            toggle .fleazo 'leading'  at xmax .ftrazo    ymin .pformat6 tagwid 5
+
+            toggle .ftnolabel 'No Label (m,mm,")' at xmin .pformat6  ymax .pformat6 tagwid 13
+
+
+            -- long layout
+            $(
+            para .pformat4 at xmin .pformat1    ymax .pformat3 text 'Fraction'      width $!pfwidth
+            para .pformat5 at xmin .pformat1    ymax .pformat4 text 'Pad Fraction'  width $!pfwidth
+            para .pformat6 at xmin .pformat1    ymax .pformat5 text 'FT Label'      width $!pfwidth
+            para .pformat7 at xmin .pformat1    ymax .pformat6 text 'Inch Sepa.'    width $!pfwidth
+            para .pformat8 at xmin .pformat1    ymax .pformat7 text 'Trail Zeros'   width $!pfwidth
+            para .pformat9 at xmin .pformat1    ymax .pformat8 text 'Lead Zeros'    width $!pfwidth
+            
+            option .ofunits   at xmax .pformat1 ymin .pformat1 width 5
+            text   .fdenom    at xmin .ofunits  ymin .pformat2 width 7 is REAL
+            text   .fdecim    at xmin .ofunits  ymin .pformat3 width 7 is REAL
+            toggle .ffract    at xmin .ofunits  ymin .pformat4 
+            toggle .fpadfr    at xmin .ofunits  ymin .pformat5 
+            text   .fftlab    at xmin .ofunits  ymin .pformat6 width 3 is STRING
+            text   .finsep    at xmin .ofunits  ymin .pformat7 width 3 is STRING
+            toggle .ftrazo    at xmin .ofunits  ymin .pformat8 
+            toggle .fleazo    at xmin .ofunits  ymin .pformat9 
+            $)
+
+
+
+            $(
+            !form = object format()
+            !form.DENOMINATOR = 32
+            !form.DP = 2
+            !form.FRACTION = true
+            !form.PADFRACTIONS = true
+            !form.FTLABEL = |'|
+            !form.INCHSEPARATOR = |.|
+            !form.TRAILZEROS = true
+            !form.UNITS = |FINCH|
+            !form.ZEROS = true
+
+            COMPSEPARATOR <STRING> Unset
+            DENOMINATOR <REAL> Unset
+            DIMENSION <STRING> Unset
+            DP <REAL> Unset
+            DVALUES <ARRAY> 0 Elements
+            ENU <BOOLEAN> Unset
+            FRACTION <BOOLEAN> Unset
+            FTLABEL <STRING> Unset
+            INCHSEPARATOR <STRING> Unset
+            LABEL <STRING> Unset
+            NEXTFORMAT <STRING> Unset
+            ORIGINEXP <BLOCK> Unset
+            PADFRACTIONS <BOOLEAN> Unset
+            PVALUES <ARRAY> 0 Elements
+            TRAILZEROS <BOOLEAN> Unset
+            UNITS <STRING> Unset
+            ZEROS <BOOLEAN> Unset
+            $)
+          exit
+          frame .frame0313 '' anchor T + L + R at xmin .frame0311 ymax .frame0312
+            para   .pfsetfile    at xmin .ufhead1 ymin .frame0313 text 'File:' width 6
+            option .oformatsettingsfile at xmax .pfsetfile  ymin .pfsetfile    width 23
+
+            button .bfnew  'New'    anchor T + R at xmin .pformat1  ymin .pfsetfile    width 5
+            button .bfrest 'Load'   anchor T + R at xmax .bfnew  +1 ymin .pfsetfile    width 5
+            button .bfsave 'Save'   anchor T + R at xmax .bfrest +1 ymin .pfsetfile    width 5
+          exit
+        exit
+        frame .frame032 'Welds' anchor T + R + L at xmin .frame031 ymax .frame031 +0.5
+          -- Allowance or Optionfile
+
+          -- Optionfile
+            para   .pISOfile    anchor T + L at xmin .frame032 ymin .frame032 text 'Option File:' width 8
+            option .oOptionfile anchor T + R + L at xmax .pISOfile  ymin .pISOfile    width 45
+        exit
+      exit
+    exit
+  exit
+  
+exit
+
+-- End of form definition for !!MTOdefinition
+
+------------------------------------------------------------------------
+--
+-- Method:      MTOdefinition
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .MTOdefinition()
+
+  --use mtoFormatHandler Object as global variable
+  -- !!mtoFormatHandler
+  !tmpInit = object mtoFormatHandler()
+  !this.resetFields = false
+
+  !this.cancelcall = |!this.killform()|
+  !this.initcall   = |!this.loadattlist()|
+
+  --!this.frame0.callback = |!this.switchFrame(|
+  !this.frame01.callback = |!this.switchFrame(|
+  !this.frame02.callback = |!this.switchFrame(|
+  !this.frame03.callback = |!this.switchFrame(|
+  
+  -- setup layout
+  !icnew32  =  !!pml.GETPATHNAME(|avagmbhnew32.png|)
+  !iccopy32 =  !!pml.GETPATHNAME(|avagmbhcopy32.png|)
+  !icedit32 =  !!pml.GETPATHNAME(|avagmbhedit32.png|)
+  !icdele32 =  !!pml.GETPATHNAME(|avagmbhdelete32.png|)
+  !icaddm32 =  !!pml.GETPATHNAME(|avagmbhaddmem32.png|)
+  
+  !this.newsrc.addpixmap(!icnew32)
+  !this.newsrcm.addpixmap(!icaddm32)
+  !this.delsrc.addpixmap(!icdele32)
+  
+  !this.newflt.addpixmap(!icnew32)
+  !this.modflt.addpixmap(!icedit32)
+  !this.delflt.addpixmap(!icdele32)
+
+  !this.newsrc.settooltip('Add CE')
+  !this.newsrcm.settooltip('Add CE Members')
+  !this.delsrc.settooltip('Delete Selection')
+  
+  !this.newflt.settooltip('Add criteria')
+  !this.modflt.settooltip('Switch Editormode')
+  !this.delflt.settooltip('Delete criteria')
+  
+  -- add callbacks
+  !this.desc.callback  = |!this.setoptions()|
+  !this.func.callback  = |!this.setoptions()|
+  !this.docu.callback  = |!this.setoptions()|
+  !this.tgen1.callback  = |!this.setoptions()|
+  !this.tgen2.callback  = |!this.setoptions()|
+  !this.tgen3.callback  = |!this.setoptions()|
+  
+  !this.config.callback = |!this.setconfig()|
+  
+  !this.tmtoc.callback = |!this.setoptions()|
+  !this.tbolt.callback = |!this.setoptions()|
+  !this.tbend.callback = |!this.setoptions()|
+  !this.tweld.callback = |!this.setoptions()|
+  !this.tatta.callback = |!this.setoptions()|
+  !this.tftub.callback = |!this.setoptions()|
+
+  !this.tpipe.callback = |!this.setoptions()|
+  !this.tsumm.callback = |!this.setoptions()|
+  !this.tspec.callback = |!this.setoptions()|
+  !this.tpsort.callback = |!this.setoptions()|
+
+  !this.radioSikla.callback = |!this.setoptions()|
+
+  !this.tkeepDel.callback = |!this.setoptions()|
+
+  -- weld
+  !this.oOptionfile.callback = |!this.setoptions()|
+  
+  -- unit
+  !this.obore.callback = |!this.getFormatSelected(|
+  !this.testbore.callback = |!this.startCalculation()|
+  !this.olength.callback = |!this.getFormatSelected(|
+  !this.testlength.callback = |!this.startCalculation()|
+  !this.obdia.callback = |!this.getFormatSelected(|
+  !this.testbdia.callback = |!this.startCalculation()|
+  !this.oblen.callback = |!this.getFormatSelected(|
+  !this.testblen.callback = |!this.startCalculation()|
+
+  -- piece label
+  !this.pcsLabel.callback = |!this.modifyTestFormatObject(true)|
+
+  !this.oformatsel.callback = |!this.getFormatSelected(|
+
+  !this.ofunits.callback = |!this.modifyTestFormatObject(true)|
+  !this.fdenom.callback = |!this.modifyTestFormatObject(true)|
+  !this.fdecim.callback = |!this.modifyTestFormatObject(true)|
+  !this.ffract.callback = |!this.modifyTestFormatObject(true)|
+  !this.fpadfr.callback = |!this.modifyTestFormatObject(true)|
+  !this.fftlab.callback = |!this.modifyTestFormatObject(true)|
+  !this.finsep.callback = |!this.modifyTestFormatObject(true)|
+  !this.ftrazo.callback = |!this.modifyTestFormatObject(true)|
+  !this.fleazo.callback = |!this.modifyTestFormatObject(true)|
+  !this.ftnolabel.callback = |!this.modifyTestFormatObject(true)|
+
+  !this.bfnew.callback  = |!this.UnitFile('new')|
+  !this.bfrest.callback = |!this.UnitFile('load')|
+  !this.bfsave.callback = |!this.UnitFile('save')|
+
+  !this.bfnew.settooltip(|Save settings to a new File and assign it to the MTO.|)
+  !this.bfrest.settooltip(|Load exiting File data - FILE IS NOT ASSIGNED TO MTO!|)
+  !this.bfsave.settooltip(|Save settings to selected File and assign it to the MTO.|)
+
+  !aa = array()
+  !aa.append(|metric|)
+  !aa.append(|imperial|)
+  !this.obore.dtext   = !aa
+  !this.olength.dtext = !aa
+  !this.obdia.dtext   = !aa
+  !this.oblen.dtext   = !aa
+  
+  !bore = object bore(32)
+  !this.testbore.val = !bore
+  !this.testlength.val = |1348,72mm|
+  !this.testbdia.val = |20mm|
+  !this.testblen.val = |58mm|
+
+  !this.outbore.editable = false
+  !this.outlength.editable = false
+  !this.outbdia.editable = false
+  !this.outblen.editable = false
+
+  !choose = array()
+  !choose.append(|Bore|)
+  !choose.append(|Length|)
+  !choose.append(|Bolt diam.|)
+  !choose.append(|Bolt length|)
+  !choose.append(|All|)
+  !this.oformatsel.dtext = !choose
+  !chooseR = array()
+  !chooseR.append(|BORE|)
+  !chooseR.append(|LENGTH|)
+  !chooseR.append(|BDIA|)
+  !chooseR.append(|BLEN|)
+  !chooseR.append(|ALL|)
+  !this.oformatsel.rtext = !chooseR
+
+  !units = array()
+  !units.append(|MM|)
+  !units.append(|M|)
+  !units.append(|FINCH|)
+  !units.append(|INCH|)
+  !this.ofunits.dtext = !units
+
+  !this.ofunits.val = 1
+  !this.fdenom.val = 32
+  !this.fdecim.val = 2
+  !this.ffract.val = true
+  !this.fpadfr.val = false
+  !this.fftlab.val = |'|
+  !this.finsep.val = |.|
+  !this.ftrazo.val = true
+  !this.fleazo.val = false
+  !this.ftnolabel.val = false
+
+  !this.pcsLabel.val = |Stk|
+
+  -- load data
+  if !!mtoFormatHandler.useAllFlag then
+    !this.testFormat = !!mtoFormatHandler.all
+    !this.oformatsel.val = 5
+  else
+    !this.testFormat = !!mtoFormatHandler.bore
+    !this.oformatsel.val = 1
+  endif
+
+  -- load settings to form (debug only)
+  -- !this.initFormatSettings()
+
+  -- find settingsfiles
+  !this.oformatsettingsfile.dtext = !!mtoFormatHandler.getSettingFiles()
+  
+  -- load optionfiles to list
+  !this.getOptionFiles()
+
+  -- setup netgrid objects
+  !this.setupform()
+  
+--  !this.loadattlist()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setupform
+--
+-- Description: setup .NET grids (initial)
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setupform()
+  
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  
+  -- setup Source list
+  !this.mtosourcedatalistGrid = object NETGRIDCONTROL()
+  
+  -- Add PML event handlers to .Net control
+--  !this.mtosourcedatalistGrid.addeventhandler('OnPopup', !this, 'setPopUpSOURCE')
+  !this.mtosourcedatalistGrid.addeventhandler('AfterSelectChange', !this, 'dataselectSOURCE')
+--  !this.mtosourcedatalistGrid.addeventhandler('BeforeCellUpdate', !this, 'dataupdateSOURCE')
+--  !this.mtosourcedatalistGrid.addeventhandler('BeforeCellActivate', !this, 'dataselectSOURCE')
+--  !this.mtosourcedatalistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistSOURCE')
+  
+  -- Add .Net control to PML container
+  !this.mtosourcedatalistFrame.control = !this.mtosourcedatalistGrid.handle()
+  
+   -- configure grid presentation
+  !this.mtosourcedatalistGrid.editableGrid(FALSE)
+  !this.mtosourcedatalistGrid.columnExcelFilter(TRUE)
+  !this.mtosourcedatalistGrid.outlookGroupStyle(TRUE)
+  !this.mtosourcedatalistGrid.fixedHeaders(FALSE)
+  !this.mtosourcedatalistGrid.fixedRows(FALSE)
+  !this.mtosourcedatalistGrid.errorIcon(TRUE)
+  !this.mtosourcedatalistGrid.clearGrid()
+  !this.mtosourcedatalistGrid.singlerowselection(FALSE)
+--  !this.mtosourcedatalistGrid.singlerowselection(TRUE)
+  !this.mtosourcedatalistGrid.columnSummaries(FALSE)
+
+
+  -- setup Filter list
+  !this.mtofilterdatalistGrid = object NETGRIDCONTROL()
+  
+  -- Add PML event handlers to .Net control
+--  !this.mtofilterdatalistGrid.addeventhandler('OnPopup', !this, 'setPopUpFILTER')
+  !this.mtofilterdatalistGrid.addeventhandler('AfterSelectChange', !this, 'dataselectFILTER')
+  !this.mtofilterdatalistGrid.addeventhandler('BeforeCellUpdate', !this, 'dataupdateFILTER')
+--  !this.mtofilterdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'dataselectFILTER')
+  !this.mtofilterdatalistGrid.addeventhandler('BeforeCellActivate', !this, 'datasetlistFILTER')
+  
+  -- Add .Net control to PML container
+  !this.mtofilterdatalistFrame.control = !this.mtofilterdatalistGrid.handle()
+  
+   -- configure grid presentation
+  !this.mtofilterdatalistGrid.editableGrid(FALSE)
+  !this.mtofilterdatalistGrid.columnExcelFilter(TRUE)
+  !this.mtofilterdatalistGrid.outlookGroupStyle(TRUE)
+  !this.mtofilterdatalistGrid.fixedHeaders(FALSE)
+  !this.mtofilterdatalistGrid.fixedRows(FALSE)
+  !this.mtofilterdatalistGrid.errorIcon(TRUE)
+  !this.mtofilterdatalistGrid.clearGrid()
+  !this.mtofilterdatalistGrid.singlerowselection(FALSE)
+--  !this.mtofilterdatalistGrid.singlerowselection(TRUE)
+  !this.mtofilterdatalistGrid.columnSummaries(FALSE)
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataselectSOURCE
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataselectSOURCE(!data is ARRAY)
+  
+  -- Initialise data
+  !this.mtosourcedatalistGridSelection.clear()
+
+  if !data[0].objecttype() eq |STRING| then
+    !element = !data[0].dbref()
+    !this.mtosourcedatalistGridSelection.append(!element)
+  else
+    
+    -- Get selected elements
+    do !item values !data[0]
+      !element = !item.dbref()
+      !this.mtosourcedatalistGridSelection.append(!element)
+    enddo
+    
+  endif
+  
+  !this.mtosourcedatalistGrid.refreshtable()
+  !this.mtosourcedatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataselectFILTER
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataselectFILTER(!data is ARRAY)
+  
+  -- Initialise data
+  !this.mtofilterdatalistGridSelection.clear()
+
+  if !data[0].objecttype() eq |STRING| then
+    !element = !data[0].dbref()
+    !this.mtofilterdatalistGridSelection.append(!element)
+  else
+    
+    -- Get selected elements
+    do !item values !data[0]
+      !element = !item.dbref()
+      !this.mtofilterdatalistGridSelection.append(!element)
+    enddo
+    
+  endif
+  
+  !this.mtofilterdatalistGrid.refreshtable()
+  !this.mtofilterdatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      datasetlistFILTER
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .datasetlistFILTER(!data is ARRAY)
+
+  -- set valid values for E3D1.1 - not necessary for E3D2.1 or later (lexcion data is used!)!
+  -- set valid values for E3D3.1 - lexcion data is NOT used anymore... thanks to AVEVA.
+  var !banner BANNER
+  -- if !banner.lowcase().matchwild(|*everything3d design mk1.1*|) then
+    
+    if !data[1] eq |:MTO-SRCFLT-ELEM| then
+      
+      !values = array()
+      !values.append(|SITE|)
+      !values.append(|ZONE|)
+      !values.append(|PIPE|)
+  
+      !col = !this.mtofilterdatalistGrid.GETCOLUMNPOSITION(':MTO-SRCFLT-ELEM')
+      !this.mtofilterdatalistGrid.CREATEVALUELIST('elemtype', !values)
+      !this.mtofilterdatalistGrid.ASSIGNVALUELISTTOCOLUMN('elemtype', !col)
+      
+    endif
+  
+    if !data[1] eq |:MTO-SRCFLT-OP| then
+      
+      !values = array()
+      !values.append(|EQ|)
+      !values.append(|NEQ|)
+      !values.append(|MATCHWILD|)
+      
+      !col = !this.mtofilterdatalistGrid.GETCOLUMNPOSITION(':MTO-SRCFLT-OP')
+      !this.mtofilterdatalistGrid.CREATEVALUELIST('operator', !values)
+      !this.mtofilterdatalistGrid.ASSIGNVALUELISTTOCOLUMN('operator', !col)
+      
+    endif
+    
+  -- endif
+  
+  if !data[1] eq |:MTO-SRCFLT-ATTR| then
+    
+    !values = array()
+ -- use data from file!
+    !values = !this.attlist
+$( 
+    !values.append(|NAME|)
+    !values.append(|DESCRIPTION|)
+    !values.append(|FUNCTION|)
+    !values.append(|PURPOSE|)
+    !values.append(|NUMBER|)
+    !values.append(|AREA|)
+$)
+    !col = !this.mtofilterdatalistGrid.GETCOLUMNPOSITION(':MTO-SRCFLT-ATTR')
+    !this.mtofilterdatalistGrid.CREATEVALUELIST('attrib', !values)
+    !this.mtofilterdatalistGrid.ASSIGNVALUELISTTOCOLUMN('attrib', !col)
+    
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      dataupdateFILTER
+--
+-- Description: Update
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Return array from selection
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .dataupdateFILTER(!data is ARRAY)
+  
+  !tmpce = !!ce
+  
+  -- Initialise Variable
+  --# beforeCellUpdate
+  -- $P update
+  
+  if !data[2] eq |UDAxyz| then
+    !data[3] = FALSE
+    !this.mtofilterdatalistGrid.refreshtable()
+    return
+  endif
+  
+  !data[3] = TRUE
+  
+  $!data[1]
+  $!data[2] $!data[0]
+  handle(47,15)(47,50)(47,62)
+    $!data[2] '$!data[0]'
+    handle any
+      $P $!!error.text
+      !data[3] = FALSE
+    endhandle
+  elsehandle any
+    !data[3] = FALSE
+  endhandle
+  
+  $!tmpce
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      switchFrame
+--
+-- Description: Load data or show form while switch Frame...
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .switchFrame(!sender is GADGET, !action is STRING)
+
+  -- $P Switch frame
+  -- q var !sender
+  -- q var !action
+
+  if !sender.name() eq |FRAME02| then
+    if !action eq |SHOWN| then
+
+      !initForm = false
+      
+      if defined(!!MTOpipelistViewer) then
+        if !!MTOpipelistViewer.caller neq |MTODEF| then
+          !initForm = true
+        endif
+      else
+        !initForm = true
+      endif
+
+      if !initForm then
+
+        show !!MTOpipelistViewer At xr 0.55 yr 0.2
+        !!MTOpipelistViewer.caller = |MTODEF|
+        !!MTOpipelistViewer.getMTOgroup(!this.mtodef)
+        if !!MTOpipelistViewer.srcHandler.same.not() then
+          !ans = !!alert.confirm(|Source in MTO Definiton is not up to date! Update Source?|)
+          if !ans eq |YES| then
+            !!MTOpipelistViewer.srcHandler.updateSourceInDB()
+            !this.modifyflag = TRUE
+          endif
+        endif
+        
+      endif
+
+      show !!MTOpipelistViewer At xr 0.55 yr 0.2
+
+    elseif !action eq |HIDDEN| then
+
+      hide !!MTOpipelistViewer
+      handle any
+      endhandle
+
+    endif
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadattlist
+--
+-- Description: Load attributes from INI file
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadattlist()
+  
+  !this.attlist.clear()
+  
+  !filename = |mto-filter-attributes.ini|
+  
+  var !prj proj code
+  !prjdef = |%| + !prj + |DFLTS%\ini\| + !filename
+  !file = object file(!prjdef)
+  
+  if !file.exists().not() then
+    !pml = |%pmllib%\mtopiping\ini\| + !filename
+    !file = object file(!pml)
+  endif
+  
+  if !file.exists().not() then
+    $P No "mto-filter-attributes.ini" for attribute list found. Using defaults hardcoded.
+    !this.attlist.append(|NAME|)
+    !this.attlist.append(|DESCRIPTION|)
+    !this.attlist.append(|FUNCTION|)
+    !this.attlist.append(|PURPOSE|)
+    !this.attlist.append(|NUMBER|)
+    !this.attlist.append(|AREA|)
+  else
+    !data = !file.readfile()
+    do !line value !data
+      if !line.trim().matchwild(|#*|) then
+        -- comment
+        SKIP
+      endif
+      if !line.replace(| |,||) eq || or !line.trim().lowcase() eq 'unset' then
+        SKIP
+      endif
+      !this.attlist.append(!line.trim().replace(| |,||))
+    enddo
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loaddata
+--
+-- Description: Load data from .mtodef to form
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loaddata()
+  
+  !this.modifyflag = FALSE
+  
+  if !this.mtodef.badref() then
+    RETURN
+  endif
+  
+  !this.desc.val   = !this.mtodef.Description
+  !this.func.val   = !this.mtodef.Function
+  !this.docu.val   = !this.mtodef.:MTO-DOCU-NO
+
+  !this.tgen1.val   = !this.mtodef.:MTO-ClientDOCU-NO
+  !this.tgen2.val   = !this.mtodef.:MTO-INFO-01
+  !this.tgen3.val   = !this.mtodef.:MTO-INFO-02
+
+  !this.tmtoc.val  = !this.mtodef.:MTO-USEMTOFLAGS
+  !this.tbolt.val  = !this.mtodef.:MTO-INCLUDEBOLTS
+  !this.tbend.val  = !this.mtodef.:MTO-ADDBENDS
+  !this.tweld.val  = !this.mtodef.:MTO-ADDWELD
+  !this.tatta.val  = !this.mtodef.:MTO-ADDATTA
+  !this.tftub.val  = !this.mtodef.:MTO-FTUBUIDS
+  
+  !this.tpipe.val  = !this.mtodef.:MTO-BY-PIPE
+  !this.tpsort.val = !this.mtodef.:MTO-PIPE-SORTHIER
+  !this.tsumm.val  = !this.mtodef.:MTO-SUMM
+  !this.tspec.val  = !this.mtodef.:MTO-BY-SPEC
+
+  !this.tkeepDel.val  = !this.mtodef.:MTO-KEEP-DEL
+  handle any
+    !this.tkeepDel.val  = false
+  endhandle
+
+  -- 22.08.02 - Sikla Option new
+  !siklaMode = !this.mtodef.:MTO-SIKLA-MODE
+  handle any
+    -- default
+    !siklaMode = |INCLUDE|
+  endhandle
+
+  if !siklaMode  eq |INCLUDE| then
+    !indSIK = 1
+  elseif !siklaMode  eq |EXCLUDE| then
+    !indSIK = 2
+  elseif !siklaMode  eq |ONLY| then
+    !indSIK = 3
+  else
+    -- default
+    !indSIK = 1
+  endif
+
+  !this.radioSikla.val = !indSIK
+
+
+
+  !mtoUnitFile = !this.mtodef.:MTO-UNIT-FILE
+  handle any
+    !mtoUnitFile = ||
+  elsehandle none
+    if !mtoUnitFile.unset() or !mtoUnitFile.trim() eq || then
+      !mtoUnitFile = ||
+    endif
+  endhandle
+
+  -- select Optionfile 
+  !rtext = !this.oOptionfile.rtext
+
+  !weldFile = !this.mtodef.:MTO-OPTION-FILE
+  handle any
+    !weldFile = ||
+  elsehandle none
+    if !weldFile.unset() then
+      !weldFile = ||
+    endif
+  endhandle
+
+  !ind = !rtext.find(!weldFile)
+
+  if !ind.empty().not() then
+    !this.oOptionfile.val = !ind[1]
+  else
+    !this.oOptionfile.val = 1
+  endif
+
+  -- load config
+  var !aa coll all SITE with ACTTYPE eq |:MTOCONFIG|
+  var !bb eval NAME for all from !aa
+  var !cc eval DESC for all from !aa
+  !dtxt = array()
+  do !i index !aa
+    !dtxt[$!i] = !bb[$!i] + | // | + !cc[$!i]
+  enddo
+  !this.config.dtext = !dtxt
+  !this.config.rtext = !aa
+  
+  !dbconf = !this.mtodef.:MTO-CONFIGLINK
+  if !dbconf.badref().not() then
+    !refno = !dbconf.string()
+    !ind = !aa.find(!refno)
+    !i = !ind[1]
+    handle any
+      !this.config.val = 1
+      handle any
+      endhandle
+    elsehandle none
+      !this.config.val = !i
+    endhandle
+  else
+    !this.config.val = 1
+    handle any
+    endhandle
+  endif
+  
+  !this.mtodef.:MTO-CONFIGLINK = !this.config.selection().dbref()
+  
+  
+  -- switch pipe sort toggle
+  if !this.tpipe.val eq TRUE then
+    !this.tpsort.active = TRUE
+  else
+    !this.tpsort.active = FALSE
+  endif
+  
+  -- find source
+  var !a coll all PIPE with acttype eq |:MTOSOURCE| for $!this.mtodef
+  if !a.unset() then
+    !tmpce = !!ce
+    $!this.mtodef
+    NEW :MTOSOURCE
+    !this.source = !!ce
+  else
+    !this.source = !a[1].dbref()
+  endif
+
+  -- update source
+  !this.updatesource()
+  
+  -- load source
+  !this.loadsource()
+  
+  -- load filter
+  !this.loadfilter()
+
+  -- load Unit Settings from file
+  if !mtoUnitFile neq || then
+    !ind = !this.oformatsettingsfile.dtext.find(!mtoUnitFile)
+    if !ind.empty().not() then
+      !this.oformatsettingsfile.val = !ind[1]
+      !this.unitFile('load')
+    endif
+  else
+    !!mtoFormatHandler.loadFromFile(|mto-default-units.ini|)
+  endif
+
+  !this.pcsLabel.val = !!mtoFormatHandler.pcsLabel
+
+  -- update form
+  !this.initFormatSettings()
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      updatesource
+--
+-- Description: Load source data from .mtodef to form
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .updatesource()
+  
+  do !mem value !this.source.member
+    if !mem.acttype eq |:MTOSRCELE| then
+      if !mem.:MTODESLNK.badref() then
+        -- try to get Element!
+        !dbref = !mem.:MTODESLNKNAME.dbref()
+        handle any
+        elsehandle none
+          !mem.:MTODESLNK = !dbref
+        endhandle
+      else
+        !mem.:MTODESLNKNAME = !mem.:MTODESLNK.name
+      endif
+    endif
+  enddo
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadsource
+--
+-- Description: Load source data from .mtodef to form
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadsource()
+  
+  var !ele coll all BRAN with acttype eq |:MTOSRCELE| and purp eq |CRIT| for $!this.source
+  
+  -- Clear any existing data
+  !this.mtosourcedatalistGrid.clearGrid()
+  !this.mtosourcedatalistGridSelection.clear()
+  
+  -- Set headings
+  !title = ':MTOSOURCE'
+  !attributes = array()
+  !attributes.append(|REFNO|)
+  
+  !attributes.append(|TYPE of :MTODESLNK|)
+  !attributes.append(|NAME of :MTODESLNK|)
+  !attributes.append(|:MTODESLNKNAME|)
+  
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|Type|)
+  !headings.append(|Name|)
+  !headings.append(|Old Link Name|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  -- Get source
+  !nds = object NETDATASOURCE(!title, !attributes, !headings, !ele)
+  !this.mtosourcedatalistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.mtosourcedatalistGrid.autofitcolumns()
+  -- hide name and type
+  !this.mtosourcedatalistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+--  !this.mtosourcedatalistGrid.SETGROUPBYCOLUMN(2,TRUE)
+  
+  !this.mtosourcedatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadfilter
+--
+-- Description: Load filter data from .mtodef to form
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadfilter()
+  
+  var !ele coll all BRAN with acttype eq |:MTOSRCFLT| for $!this.source
+  
+  -- Clear any existing data
+  !this.mtofilterdatalistGrid.clearGrid()
+  !this.mtofilterdatalistGridSelection.clear()
+  
+  -- Set headings
+  !title = ':MTOFILTER'
+  !attributes = array()
+  !attributes.append(|REFNO|)
+  
+  !attributes.append(|:MTO-SRCFLT-ELEM|)
+  !attributes.append(|:MTO-SRCFLT-ATTR|)
+  !attributes.append(|:MTO-SRCFLT-OP|)
+  !attributes.append(|:MTO-SRCFLT-VAL|)
+  
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|Element|)
+  !headings.append(|Attribute|)
+  !headings.append(|Operator.|)
+  !headings.append(|Value|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  -- Get filter
+  !nds = object NETDATASOURCE(!title, !attributes, !headings, !ele)
+  !this.mtofilterdatalistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.mtofilterdatalistGrid.autofitcolumns()
+  -- hide name and type
+  !this.mtofilterdatalistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+--  !this.mtofilterdatalistGrid.SETGROUPBYCOLUMN(2,TRUE)
+  
+  !this.mtofilterdatalistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      mtosource
+--
+-- Description: Modify MTO source
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      new / delete
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtosource(!action is STRING)
+  
+  !tmpce = !!ce
+  
+  if !action.lowcase() eq |new| then
+    if !tmpce.acttype eq |WORL| or !tmpce.acttype eq |GPSET| or !tmpce.acttype eq |SITE| or !tmpce.acttype eq |ZONE| or !tmpce.acttype eq |PIPE| then
+      $!this.source
+      NEW :MTOSRCELE
+      !!ce.purpose = |CRIT|
+      !!ce.:MTODESLNK = !tmpce
+      !!ce.:MTODESLNKNAME = !tmpce.name
+    else
+      !!alert.error(|Only World, Gpset, Site, Zone or Pipe allowed! - CE is not valid!|)
+      RETURN
+    endif
+  elseif !action.lowcase() eq |mem| then
+    if !tmpce.acttype eq |WORL| or !tmpce.acttype eq |GPSET| or !tmpce.acttype eq |SITE| or !tmpce.acttype eq |ZONE| or !tmpce.acttype eq |PIPE| then
+      do !mem value !tmpce.member
+        $!this.source
+        NEW :MTOSRCELE
+        !!ce.purpose = |CRIT|
+        !!ce.:MTODESLNK = !mem
+        !!ce.:MTODESLNKNAME = !mem.name
+      enddo
+    else
+      !!alert.error(|Only World, Gpset, Site, Zone or Pipe allowed! - CE is not valid!|)
+      RETURN
+    endif
+  elseif !action.lowcase() eq |del| then
+    !ans = !!alert.confirm(|Do you really want to delete selected Source(s)?|)
+    if !ans neq |YES| then
+      RETURN
+    endif
+    do !i index !this.mtosourcedatalistGridSelection
+      $!this.mtosourcedatalistGridSelection[$!i]
+      DELETE :MTOSRCELE
+    enddo
+  endif
+
+  -- update in DB
+  !srcHandler = object mtoSourceHandler()
+  !srcHandler.getMTOdefiniton(!this.source.owner)
+  !srcHandler.updateSourceInDB()
+
+  $!tmpce
+  handle any
+  endhandle
+  
+  -- update pipe list
+  show !!MTOpipelistViewer At xr 0.55 yr 0.2
+  hide !!MTOpipelistViewer
+  !!MTOpipelistViewer.caller = |MTODEF|
+  !!MTOpipelistViewer.getMTOgroup(!this.mtodef)
+  !!MTOpipelistViewer.srcHandler.updateSourceInDB()
+  -- !this.modifyflag = TRUE
+  
+  !this.loadsource()
+
+  show !!MTOpipelistViewer At xr 0.55 yr 0.2
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      mtofilter
+--
+-- Description: Modify MTO filter
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      STRING      new / modify / delete
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtofilter(!action is STRING)
+  
+  !tmpce = !!ce
+  
+  if !action.lowcase() eq |new| then
+    $!this.source
+    NEW :MTOSRCFLT
+  elseif !action.lowcase() eq |mod| then
+    -- switch toggle
+    if !this.mtofilterdatalistGrid.editableGrid() eq TRUE then
+      !this.mtofilterdatalistGrid.editableGrid(FALSE)
+    else
+      !this.mtofilterdatalistGrid.editableGrid(TRUE)
+    endif
+  elseif !action.lowcase() eq |del| then
+    !ans = !!alert.confirm(|Do you really want to delete selected Filter?|)
+    if !ans neq |YES| then
+      RETURN
+    endif
+    do !i index !this.mtofilterdatalistGridSelection
+      $!this.mtofilterdatalistGridSelection[$!i]
+      DELETE :MTOSRCFLT
+    enddo
+  endif
+  
+  $!tmpce
+  handle any
+  endhandle
+  
+  !this.loadfilter()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setoptions
+--
+-- Description: Put changes to DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setoptions()
+  
+  if !this.mtodef.badref() then
+    !!alert.error(|No definition active!|)
+    return
+  endif
+
+  !this.mtodef.description = !this.desc.val
+  !this.mtodef.function    = !this.func.val
+  
+  !this.mtodef.:MTO-DOCU-NO       = !this.docu.val
+  
+  !this.mtodef.:MTO-ClientDOCU-NO = !this.tgen1.val
+  !this.mtodef.:MTO-INFO-01       = !this.tgen2.val
+  !this.mtodef.:MTO-INFO-02       = !this.tgen3.val
+  
+  
+  !this.mtodef.:MTO-USEMTOFLAGS   = !this.tmtoc.val
+  !this.mtodef.:MTO-INCLUDEBOLTS  = !this.tbolt.val
+  !this.mtodef.:MTO-ADDBENDS      = !this.tbend.val
+  !this.mtodef.:MTO-ADDWELD       = !this.tweld.val
+  !this.mtodef.:MTO-ADDATTA       = !this.tatta.val
+  !this.mtodef.:MTO-FTUBUIDS      = !this.tftub.val
+  
+  !this.mtodef.:MTO-BY-PIPE       = !this.tpipe.val
+  !this.mtodef.:MTO-PIPE-SORTHIER =  !this.tpsort.val
+  !this.mtodef.:MTO-SUMM          = !this.tsumm.val
+  !this.mtodef.:MTO-BY-SPEC       = !this.tspec.val
+
+  !this.mtodef.:MTO-KEEP-DEL      = !this.tkeepDel.val
+  handle any
+  endhandle
+
+  -- 22.08.02 - Sikla Option new
+  !indSIK = !this.radioSikla.val
+  if !indSIK eq 1 then
+    !siklaMode  = |INCLUDE|
+  elseif !indSIK eq 2 then
+    !siklaMode  = |EXCLUDE|
+  elseif !indSIK eq 3 then
+    !siklaMode  = |ONLY|
+  else
+    -- default
+    !siklaMode  = |INCLUDE|
+  endif
+
+  !this.mtodef.:MTO-SIKLA-MODE  = !siklaMode
+  handle any
+  endhandle
+
+
+  !optFilSel = !this.oOptionfile.selection(|RTEXT|)
+  if !optFilSel neq |COMMENT| then
+    !this.mtodef.:MTO-OPTION-FILE      = !optFilSel
+    handle any
+    endhandle
+  endif
+
+  -- switch pipe sort toggle
+  if !this.tpipe.val eq TRUE then
+    !this.tpsort.active = TRUE
+  else
+    !this.tpsort.active = FALSE
+  endif
+  
+  -- try to set name
+  if !this.desc.val.unset() or !this.desc.val.empty() or !this.desc.val.replace(| |,||) eq || then
+    -- no name
+  else
+    !name = |/MTOGRP/| + !this.desc.val
+    !name = !name.trim().replace(| |,|-|).upcase()
+    if !this.mtodef.name eq !name then
+      -- OK
+    else
+      !this.mtodef.name = !name
+      handle any
+        do !i from 1 to 999
+          !tmpname = !name + |/| + !i.string('I3')
+          !this.mtodef.name = !tmpname
+          handle any
+            SKIP
+          elsehandle none
+            BREAK
+          endhandle
+        enddo
+      endhandle
+    endif
+  endif
+  
+  !this.modifyflag = TRUE
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setconfig
+--
+-- Description: Set Config UDA
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setconfig()
+  
+  
+  !oldconf = !this.mtodef.:MTO-CONFIGLINK
+  !newconf = !this.config.selection().dbref()
+  handle any
+    !alert.error(|Config not found!|)
+    RETURN
+  endhandle
+  
+  if !oldconf neq !newconf then
+    !this.mtodef.:MTO-CONFIGLINK = !newconf
+    !this.modifyflag = TRUE
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      killform
+--
+-- Description: Kill form update MTOmanager
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .killform()
+  
+  if defined(!!MTOmanager) and !this.modifyflag then
+    !!MTOmanager.loadmtogrps()
+  endif
+  
+  kill !!MTOpipelistViewer
+
+  kill !!MTOdefinition
+  
+endmethod
+
+-- 2021.11.23 - HZO - New Formats and Welds
+
+------------------------------------------------------------------------
+--
+-- Method:      getFormatSettings
+--
+-- Description: get format settings for conversion, from form or current setup!
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getFormatSettings()
+  
+  -- load data to form
+  !imperial = false
+  if !this.testFormat.UNITS.matchwild(|*INCH|) then
+    !imperial = true
+  endif
+
+  !units = array()
+  if !imperial then
+    !units.append(|FINCH|)
+    !units.append(|INCH|)
+  else
+    !units.append(|MM|)
+    !units.append(|M|)
+  endif
+
+  if !this.testUnitSelect eq |ALL| then
+    !units.clear()
+    !units.append(|MM|)
+    !units.append(|M|)
+    !units.append(|FINCH|)
+    !units.append(|INCH|)
+  endif
+
+  !this.ofunits.dtext = !units
+  
+  -- update Test Format Object
+  !ind = !this.ofunits.rtext.find(!this.testFormat.UNITS)
+  if !ind.empty() then
+    !this.ofunits.val = 1
+    $P Unit from file not found! Using default!
+  else
+    !this.ofunits.val = !ind[1]
+  endif
+
+  !this.fdenom.val = !this.testFormat.DENOMINATOR
+  !this.fdecim.val = !this.testFormat.DP
+  !this.fftlab.val = !this.testFormat.FTLABEL
+  !this.finsep.val = !this.testFormat.INCHSEPARATOR
+  !this.ffract.val = !this.testFormat.FRACTION
+  !this.fpadfr.val = !this.testFormat.PADFRACTIONS
+  !this.ftrazo.val = !this.testFormat.TRAILZEROS
+  !this.fleazo.val = !this.testFormat.ZEROS
+
+  if !this.testFormat.LABEL.unset() or !this.testFormat.LABEL.trim() eq || then
+    !this.ftnolabel.val = true
+  else
+    !this.ftnolabel.val = false
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getFormatSelected
+--
+-- Description: get format settings for current selection!
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getFormatSelected(!sender is GADGET, !action is STRING)
+
+  !senderType = !sender.type()
+  !senderName = !sender.name()
+  !senderVal = !sender.val
+  !senderPick = !sender.pickedfield
+
+  -- $P $!senderName - $!action - $!senderVal - $!senderPick
+
+  if !senderName.lowcase() eq |oformatsel| then
+    -- OK
+  else
+    -- switch oformatsel!
+    if !action neq |SELECT| then
+      return
+    endif
+
+    -- change pulldown value
+    if !senderName.matchwild(|*BORE|) then
+      !selectUnit = |BORE|
+    elseif !senderName.matchwild(|*LENGTH|) then
+      !selectUnit = |LENGTH|
+    elseif !senderName.matchwild(|*BDIA|) then
+      !selectUnit = |BDIA|
+    elseif !senderName.matchwild(|*BLEN|) then
+      !selectUnit = |BLEN|
+    endif
+
+    -- select from option
+    !ind = !this.oformatsel.rtext.find(!selectUnit)
+    !this.oformatsel.val = !ind[1]
+  endif
+
+  if !sender eq !this.oformatsel and !action eq |UNSELECT| then
+    !this.resetFields = false
+    if !this.oformatsel.pickedfield eq 5 then
+      -- reset all fields!
+      !this.resetFields = true
+    endif
+    return
+  else
+    if !action eq |UNSELECT| then
+      return
+    endif
+  endif
+
+  if !sender eq !this.oformatsel and !action eq |SELECT| then
+    if !this.resetFields then
+      !!mtoFormatHandler.useAllFlag = false
+      !keepSelection = !senderVal
+      !this.initFormatSettings()
+      !this.oformatsel.val = !keepSelection
+    endif
+    if !this.oformatsel.pickedfield eq 5 then
+      !!mtoFormatHandler.useAllFlag = true
+    endif
+  endif
+
+  !selectTest = !this.oformatsel.selection(|RTEXT|)
+  !this.testUnitSelect = !selectTest
+
+  !this.outbore.background = 10
+  !this.outlength.background = 10
+  !this.outbdia.background = 10
+  !this.outblen.background = 10
+
+  !this.testbore.background = 10
+  !this.testlength.background = 10
+  !this.testbdia.background = 10
+  !this.testblen.background = 10
+
+  !this.obore.active = true
+  !this.olength.active = true
+  !this.obdia.active = true
+  !this.oblen.active = true
+
+  if !selectTest eq |ALL| then
+    !this.obore.active = false
+    !this.olength.active = false
+    !this.obdia.active = false
+    !this.oblen.active = false
+
+    !this.outbore.background = 4
+    !this.outlength.background = 4
+    !this.outbdia.background = 4
+    !this.outblen.background = 4
+    !this.testbore.background = 4
+    !this.testlength.background = 4
+    !this.testbdia.background = 4
+    !this.testblen.background = 4
+  else
+    !gadgetname = |out| + !selectTest
+    !gadget = !this.$!gadgetname
+    !gadget.background = 4
+    !gadgetname = |test| + !selectTest
+    !gadget = !this.$!gadgetname
+    !gadget.background = 4
+  endif
+
+  -- get testFormat
+  !this.testFormat = !!mtoFormatHandler.$!this.testUnitSelect
+
+  !imperial = FALSE
+  if !this.testFormat.UNITS.matchwild(|*INCH|) then
+    !imperial = TRUE
+  endif
+
+  if !senderName.lowcase() neq |oformatsel| then
+    -- check format
+    !SelectImp = true
+    if !sender.val eq 1 then
+      !SelectImp = false
+    endif
+
+    if !SelectImp then
+      -- use imperial
+      if !imperial.not() then
+        !this.testFormat.UNITS = |FINCH|
+        !imperial = TRUE
+      endif
+    else
+      -- use metric
+      if !imperial then
+        !this.testFormat.UNITS = |MM|
+        !imperial = FALSE
+      endif
+    endif
+
+  endif
+
+  -- update form access
+  !this.updateFormAccess(!imperial)
+
+  -- get settings from object
+  !this.getFormatSettings()
+
+  -- calculate?
+  !this.startCalculation()
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      testConvert
+--
+-- Description: run test format conversion
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .testConvert(!input is STRING) is STRING
+
+  !inValue = !input.replace(|,|,|.|).real()
+  !output = !inValue.string(!this.testFormat)
+  handle any
+    !mess = !!error.message
+    $P Error: $!mess
+    !output = |#Error|
+  endhandle
+
+  return !output
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      modifyTestFormatObject
+--
+-- Description: update format object
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .modifyTestFormatObject(!startCalculation is BOOLEAN)
+
+  !imperial = FALSE
+
+  !!mtoFormatHandler.pcsLabel = !this.pcsLabel.val
+
+  -- update Test Format Object
+  !this.testFormat.UNITS = !this.ofunits.selection(|DTEXT|)
+  !this.testFormat.DENOMINATOR = !this.fdenom.val
+  !this.testFormat.DP = !this.fdecim.val
+  !this.testFormat.FTLABEL = !this.fftlab.val
+  !this.testFormat.INCHSEPARATOR = !this.finsep.val
+  !this.testFormat.FRACTION = !this.ffract.val
+  !this.testFormat.PADFRACTIONS = !this.fpadfr.val
+  !this.testFormat.TRAILZEROS = !this.ftrazo.val
+  !this.testFormat.ZEROS = !this.fleazo.val
+
+  !this.testFormat.LABEL = ||
+  if !this.ftnolabel.val.not() then
+    if !this.testFormat.UNITS.matchwild(|*INCH|) then
+      !imperial = TRUE
+      !this.testFormat.LABEL = |"|
+    else
+      if !this.testFormat.UNITS eq |MM| then
+        !this.testFormat.LABEL = |mm|
+      else
+        !this.testFormat.LABEL = |m|
+      endif
+    endif
+  else
+    if !this.testFormat.UNITS.matchwild(|*INCH|) then
+      !imperial = TRUE
+    endif
+  endif
+
+  !!mtoFormatHandler.$!this.testUnitSelect = !this.testFormat
+
+  -- update form access
+  !this.updateFormAccess(!imperial)
+
+  -- update preview gadgets
+  if !startCalculation then
+    !this.startCalculation()
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      updateFormAccess
+--
+-- Description: update Form Access
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .updateFormAccess(!imperial is BOOLEAN)
+
+  -- update form activities
+  if !imperial then
+    !this.fdenom.active = true
+    !this.pformat2.active = true
+    !this.fdecim.active = true
+    !this.pformat3.active = true
+    !this.ffract.active = true
+    !this.fpadfr.active = true
+    !this.fftlab.active = true
+    !this.pformat4.active = true
+    !this.finsep.active = true
+    !this.pformat5.active = true
+    !this.ftrazo.active = true
+    !this.fleazo.active = true
+    !this.ftnolabel.active = true
+
+    -- additional updates
+    if !this.ffract.val then
+      !this.fdecim.active = false
+      !this.pformat3.active = false
+    else
+      !this.fpadfr.active = false
+    endif
+  else
+    !this.fdenom.active = false
+    !this.pformat2.active = false
+    !this.fdecim.active = true
+    !this.pformat3.active = true
+    !this.ffract.active = false
+    !this.fpadfr.active = false
+    !this.fftlab.active = false
+    !this.pformat4.active = false
+    !this.finsep.active = false
+    !this.pformat5.active = false
+    !this.ftrazo.active = true
+    !this.fleazo.active = false
+    !this.ftnolabel.active = true
+  endif
+
+  if !this.fdecim.val eq 0 then
+    !this.ftrazo.active = false
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      startCalculation
+--
+-- Description: calculate fields now
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .startCalculation()
+
+  -- update preview gadgets
+  !fields = array()
+
+  if !this.testUnitSelect eq |ALL| then
+    !fields.append(|BORE|)
+    !fields.append(|LENGTH|)
+    !fields.append(|BDIA|)
+    !fields.append(|BLEN|)
+  else
+    !select = !this.oformatsel.selection(|RTEXT|)
+    !fields.append(!select)
+  endif
+
+  do !selection value !fields
+    
+    !option = |o| + !selection
+    !ingadget = |test| + !selection
+    !outgadget = |out| + !selection
+
+    !opt = !this.$!option
+    !in  = !this.$!ingadget
+    !out = !this.$!outgadget
+
+    !imperial = FALSE
+    if !this.testFormat.UNITS.matchwild(|*INCH|) then
+      !imperial = TRUE
+    endif
+
+    if !imperial then
+      if !opt.val eq 1 then
+        !opt.val = 2
+      endif
+    else
+      if !opt.val eq 2 then
+        !opt.val = 1
+      endif
+    endif
+
+    -- get value
+    !value = !this.testConvert(!in.val.string())
+
+    !out.val = !value    
+  enddo
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      initFormatSettings
+--
+-- Description: initialise fields
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .initFormatSettings()
+
+  !this.resetFields = false
+
+  if !!mtoFormatHandler.useAllFlag then
+    -- update fields with "All"
+    !this.oformatsel.val = 5
+    !this.getFormatSelected(!this.oformatsel, |SELECT|)
+  else
+    -- update single fields, separate
+    do !i from 1 to 4
+      !j = 5 - !i
+      !this.oformatsel.val = !j
+      !this.getFormatSelected(!this.oformatsel, |SELECT|)
+    enddo
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      initFormatSettings
+--
+-- Description: initialise fields
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .unitFile(!option is STRING)
+
+  if !option eq |new| then
+
+    !input = !!alert.input(|Filename|,|MTO-unit-Settings.unit|)
+    handle any
+      !input = ||
+      return
+    endhandle
+    if !input.unset() or !input.trim() eq || then
+      return
+    endif
+    !tmp = !input.replace(|'|,||)
+    !tmp = !tmp.replace(|"|,||)
+    !tmp = !tmp.replace(|{|,||)
+    !tmp = !tmp.replace(|}|,||)
+    !tmp = !tmp.replace(|[|,||)
+    !tmp = !tmp.replace(|]|,||)
+    !tmp = !tmp.replace(|/|,|-|)
+    !tmp = !tmp.replace(|\|,|-|)
+    !tmp = !tmp.replace(| |,||)
+    !fileName = !tmp.replace(|__|,|_|)
+
+  elseif !option eq |load| then
+
+    !fileName = !this.oformatsettingsfile.selection(|DTEXT|)
+    handle any
+      q var !!error
+      return
+    endhandle
+    -- load from file
+    !!mtoFormatHandler.loadFromFile(!fileName)
+    -- update form
+    !this.initFormatSettings()
+    -- exit
+    return
+
+  elseif !option eq |save| then
+
+    !fileName = !this.oformatsettingsfile.selection(|DTEXT|)
+    handle any
+      q var !!error
+      return
+    endhandle
+
+  endif
+
+  -- save settings to file
+  !!mtoFormatHandler.SaveToFile(!fileName)
+
+  -- update form
+  if !option eq |new| then
+    !files = !this.oformatsettingsfile.dtext
+    !files.append(!fileName)
+    !files.sort()
+    !this.oformatsettingsfile.dtext = !files
+    !ind = !files.find(!fileName)
+    !this.oformatsettingsfile.val = !ind[1]
+  endif
+
+  -- assign file to MTO
+  if !this.mtodef.badref() then
+    RETURN
+  endif
+  
+  !this.mtodef.:MTO-UNIT-FILE = !fileName
+  handle any
+    q var !!error.message
+    !!alert.error(|Could not set UDA ":MTO-UNIT-FILE"!|)
+  endhandle
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getOptionFiles()
+--
+-- Description: get Optionfiles from Project to List
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getOptionFiles()
+
+  var !proj PROJ CODE
+  !isofolder = |%| + !proj + |ISO%\std\|
+  !fold = object file(!isofolder)
+  !files = !fold.files()
+  !fullfold = !fold.fullname()
+
+  !dtext = array()
+  !rtext = array()
+
+  !dtext.append(|--- Project Files: ---|)
+  !rtext.append(|COMMENT|)
+
+  do !file value !files
+    !fullname = !file.fullname()
+    !f = !fullname.replace(!fullfold,||).substring(2)
+    !dtext.append(!f)
+    !ff = !isofolder + !f
+    !rtext.append(!ff)
+  enddo
+
+  !dflts = |%PMLUI%\DFLTS\std\|
+  !fold = object file(!dflts)
+  !files = !fold.files()
+  !fullfold = !fold.fullname()
+
+  !dtext.append(|--- Default Files: ---|)
+  !rtext.append(|COMMENT|)
+
+  do !file value !files
+    !fullname = !file.fullname()
+    !f = !fullname.replace(!fullfold,||).substring(2)
+    !dtext.append(!f)
+    !ff = !dflts + !f
+    !rtext.append(!ff)
+  enddo
+
+  !dtext.insert(1,||)
+  !rtext.insert(1,|COMMENT|)
+  
+  !this.oOptionfile.dtext = !dtext
+  !this.oOptionfile.rtext = !rtext
+  
+endmethod

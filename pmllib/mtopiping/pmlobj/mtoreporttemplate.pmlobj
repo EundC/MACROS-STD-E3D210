@@ -1,0 +1,108 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoreporttemplate.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.02.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO controller
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtoreporttemplate
+  
+  -- settings
+  member .name              is STRING
+  member .SAPSUMMrepfil     is FILE
+  member .SAPPIPErepfil     is FILE
+  member .SUMMrepfil        is FILE
+  member .PIPErepfil        is FILE
+  
+endobject
+
+-- End of object definition for mtoreporttemplate
+
+------------------------------------------------------------------------
+--
+-- Method:      mtoreporttemplate
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtoreporttemplate()
+  
+  !this.name = ||
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setMember
+--
+-- Description: add data to mtoline
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setMember(!member is STRING, !data is STRING) is BOOLEAN
+  
+  !success = TRUE
+  
+  !this.$!member = !data
+  handle any
+    -- assumed to be FILE
+    !data = !data.replace(|.REPV|,|.repv|)
+    !file = object file(!data)
+    handle any
+      !mess = !!error.text
+      !success = FALSE
+    elsehandle none
+      if !file.exists() then
+        !this.$!member = !file
+        handle any
+          !mess = !!error.text
+          !success = FALSE
+        endhandle
+      elseif
+        !mess = |File not found: "| + !data + |"|
+        !success = FALSE
+      endif
+    endhandle
+  endhandle
+  
+  if !success.not() then
+    $P $!mess
+  endif
+  
+  RETURN !success
+  
+endmethod

@@ -1,0 +1,729 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2023 to Current Year  E&C GmbH
+--
+-- File:            mtoSourceHandler.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.02.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2023/07/18 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO source handler
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtoSourceHandler
+  
+  -- MTO Definiton in DB
+  member .mtodef            is DBREF
+  
+  -- MTO Settings for .mtodef in DB
+  member .mtosource         is DBREF
+
+  -- Design Elements given by MTO Source (Dbref SITE, ZONE, PIPE, GPSET)
+  member .sourceDefs        is ARRAY
+  -- Filter criteria given by MTO Source (Expressions)
+  member .sourceCrits       is ARRAY
+
+  -- PIPEs evaluated by Source
+  member .sourcePipesEval   is ARRAY
+  -- PIPEs stored in MTO source
+  member .sourcePipesDB     is ARRAY
+
+  -- PIPEs missing in MTO source
+  member .diffNew           is ARRAY
+  -- PIPEs to be removed from MTO source
+  member .diffDeleted       is ARRAY
+
+  -- Evaluation by Criteria and Result from MTO Source is SAME?
+  member .same              is BOOLEAN
+
+endobject
+
+-- End of object definition for mtoSourceHandler
+
+------------------------------------------------------------------------
+--
+-- Method:      mtoSourceHandler
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtoSourceHandler()
+  
+  !this.mtodef = =0/0
+  !this.mtoSource = =0/0
+
+  !this.sourceDefs.clear()
+  !this.sourceCrits.clear()
+
+  !this.sourcePipesEval.clear()
+  !this.sourcePipesDB.clear()
+
+  !this.diffNew.clear()
+  !this.diffDeleted.clear()
+
+  !this.same = false
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getMTOdefiniton
+--
+-- Description: Get Settings from DB (:MTODEF)
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getMTOdefiniton(!mtoDef is DBREF)
+  
+  !this.mtodef = =0/0
+  !this.mtoSource = =0/0
+
+  !this.sourceDefs.clear()
+  !this.sourceCrits.clear()
+  !this.sourcePipesEval.clear()
+  !this.sourcePipesDB.clear()
+  !this.diffNew.clear()
+  !this.diffDeleted.clear()
+  !this.same = false
+
+  if !mtoDef.badref() then
+    !message = |Element given to evaluate MTODEF is BADREF!|
+    return error 1 '$!message'
+  endif
+
+  if !mtoDef.acttype eq |:MTOGRP| then
+    !this.mtodef = !mtoDef
+  else
+    !owner = !mtoDef.ownlst[2]
+    handle any
+      !message = |Could not find :MTOGRP for | + !mtoDef.name
+      return error 1 '$!message'
+    elsehandle none
+      if !owner.acttype eq |:MTOGRP| then
+        !this.mtodef = !mtoDef
+      else
+        !message = |Could not find :MTOGRP for | + !mtoDef.name
+        return error 1 '$!message'
+      endif
+    endhandle
+  endif
+
+  $!mtoDef
+  FIRST :MTOSOURCE
+  handle any
+    !message = |Could not find :MTOSOURCE for | + !mtoDef.name
+    return error 1 '$!message'
+  endhandle
+
+  !this.mtoSource = !!ce
+
+  -- get source definiton -> run upgrade is not done!
+  !this.getSourceDefinition()
+
+  -- get Elements by Defintion
+  !this.evaluateSource('EVAL')
+
+  -- get Elements assigned to MTO
+  !this.evaluateSource('DB')
+
+  -- get difference between DB and EVAL, set same flag
+  !this.compareSource()
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getSourceDefinition
+--
+-- Description: get Source Definiton from DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getSourceDefinition()
+
+  !this.sourceDefs.clear()
+  !this.sourceCrits.clear()
+
+  -- Change PURPOSE create new :MTOSRCELE = run upgrade if needed!!
+  !migrate = false
+  do !member value !this.mtoSource.member
+    if !member.acttype eq |:MTOSRCELE| then
+      if !member.purpose.unset() or !member.purpose eq || then
+        !migrate = true
+        break
+      endif
+    endif
+  enddo
+
+  !tmpce = !!ce
+
+  -- relink source?
+  -- $P Check / Repair Source Links
+  !!mtoCheckLinksByName(!this.mtoSource)
+  handle any
+  endhandle
+
+  if !migrate then
+    -- run migration function
+    -- $P Run Migration to latest MTO version...
+    !!mtoSourceUpgrade(!this.mtosource)
+    handle any
+    endhandle
+  endif
+
+  $!tmpce
+
+  -- get data now
+  !error = array()
+  
+  -- get data now
+  do !mem value !this.mtoSource.member
+    if !mem.acttype eq |:MTOSRCELE| then
+      if !mem.:MTODESLNK.badref().not() then
+        if !mem.purpose eq |CRIT| then
+          -- get Design Element?
+          !this.sourceDefs.append(!mem.:MTODESLNK)
+        endif
+      endif
+    elseif !mem.acttype eq |:MTOSRCFLT| then
+      !crit = array()
+      if !mem.:MTO-SRCFLT-ATTR.unset() or !mem.:MTO-SRCFLT-ATTR.empty() or !mem.:MTO-SRCFLT-ATTR.replace(| |,||) eq || then
+        -- ignore
+        !errmess = |Filter Error: | + !mem.:MTO-SRCFLT-ELEM + | | + !mem.:MTO-SRCFLT-ATTR + | | + !mem.:MTO-SRCFLT-OP + | | + !mem.:MTO-SRCFLT-VAL
+        !error.append(!errmess)
+        SKIP
+      endif
+      if !mem.:MTO-SRCFLT-VAL.unset() or !mem.:MTO-SRCFLT-VAL.empty() or !mem.:MTO-SRCFLT-VAL.replace(| |,||) eq || then
+        -- ignore
+        !errmess = |Filter Error: | + !mem.:MTO-SRCFLT-ELEM + | | + !mem.:MTO-SRCFLT-ATTR + | | + !mem.:MTO-SRCFLT-OP + | | + !mem.:MTO-SRCFLT-VAL
+        !error.append(!errmess)
+        SKIP
+      endif
+      if !mem.:MTO-SRCFLT-OP.unset() or !mem.:MTO-SRCFLT-OP.empty() or !mem.:MTO-SRCFLT-OP.replace(| |,||) eq || then
+        -- ignore
+        !errmess = |Filter Error: | + !mem.:MTO-SRCFLT-ELEM + | | + !mem.:MTO-SRCFLT-ATTR + | | + !mem.:MTO-SRCFLT-OP + | | + !mem.:MTO-SRCFLT-VAL
+        !error.append(!errmess)
+        SKIP
+      endif
+      
+      if !mem.:MTO-SRCFLT-ELEM.unset() or !mem.:MTO-SRCFLT-ELEM.empty() or !mem.:MTO-SRCFLT-ELEM.replace(| |,||) eq || then
+        !expr1 = !mem.:MTO-SRCFLT-ATTR
+      else
+        !expr1 = !mem.:MTO-SRCFLT-ATTR + | OF | + !mem.:MTO-SRCFLT-ELEM
+      endif
+      
+      if !mem.:MTO-SRCFLT-OP eq |MATCHWILD| then
+        !exprtext = !mem.:MTO-SRCFLT-OP + |(| + !expr1 + |,'| + !mem.:MTO-SRCFLT-VAL + |')|
+      else
+        !exprtext = !expr1 + | | + !mem.:MTO-SRCFLT-OP + | | !mem.:MTO-SRCFLT-VAL
+      endif
+
+      !exprObj = object expression(!exprtext)
+      handle any
+        !errmess = |Filter Error: Can not create Expression for "| + !exprtext + |"|
+        !error.append(!errmess)
+        SKIP
+      elsehandle none
+        !this.sourceCrits.append(!exprObj)
+      endhandle
+    endif
+  enddo
+
+  if !error.unset().not() then
+    !error.sortUnique()
+    $P **** Source evaluation Errors ****
+    q var !error
+    $P **********************************
+  endif
+
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      evaluateSource
+--
+-- Description: evaluate Source Data
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .evaluateSource(!what is STRING)
+
+  if !what eq |EVAL| then
+    
+    -- get Elements by Defintion
+    !this.sourcePipesEval.clear()
+
+    !expression = object expression()
+    !expressionString = ||
+
+    do !i index !this.sourceCrits
+      !exprObj = !this.sourceCrits[$!i]
+      if !expressionString eq || then
+        !test = !exprObj.string()
+      else
+        !test = !expressionString + | AND | + !exprObj.string()
+      endif
+      !expression.expression(!test)
+      handle any
+        $P Filter is not working: $!test
+        -- q var !!error
+        -- q var !!error.callstack
+      elsehandle none
+        !expressionString = !test
+      endhandle
+    enddo
+
+    if !expressionString neq || then
+      !expression.expression(!expressionString)
+      handle any
+        !expressionString = ||
+        $P Error Expression: $!expressionString
+        -- q var !!error
+        -- q var !!error.callstack
+      endhandle
+    endif
+    
+    do !i index !this.sourceDefs
+      !sourceElement = !this.sourceDefs[$!i]
+      
+      !collection = object collection()
+      !collection.type(|PIPE|)
+      !collection.scope(!sourceElement)
+      if !expressionString neq || then
+        !collection.filter(!expression)
+      endif
+
+      !pipes = !collection.results()
+      !this.sourcePipesEval.appendArray(!pipes)
+    enddo
+
+    !this.sourcePipesEval.unique()
+
+  elseif !what eq |DB| then
+    
+    -- get Elements assigned to MTO
+    !this.sourcePipesDB.clear()
+
+    !deletedFound = false
+
+    -- get data now
+    do !mem value !this.mtoSource.member
+      if !mem.acttype eq |:MTOSRCELE| then
+        if !mem.purpose eq |PIPE| then
+          if !mem.:MTODESLNK.badref().not() then
+            if !mem.func eq |removed| then
+              -- ignore!
+            else
+              -- get Design Element
+              !this.sourcePipesDB.append(!mem.:MTODESLNK)
+            endif
+          else
+            -- deleted!!
+            if !mem.func.matchwild(|* CONFIRMED *|) then
+              -- OK
+            else
+              -- add a badref
+              !this.sourcePipesDB.append(=0/0)
+              !deletedFound = true
+            endif
+          endif
+        endif
+      endif
+    enddo
+
+    !this.sourcePipesDB.unique()
+
+    if !deletedFound then
+      $P MTO Source contains 1 or more deleted PIPEs. Please confirm PIPEs in "MTO Source Pipe list Viewer."
+    endif
+
+  else
+    return
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      compareSource
+--
+-- Description: get difference between DB and EVAL, set same flag
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .compareSource()
+
+  !this.same = false
+  
+  !tmpSameFlag = true
+
+  -- compare data
+  !this.diffDeleted = !this.sourcePipesDB.difference(!this.sourcePipesEval)
+  !this.diffNew     = !this.sourcePipesEval.difference(!this.sourcePipesDB)
+
+  if !this.diffNew.empty() and !this.diffDeleted.empty() then
+    !this.same = true
+  endif
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      updateSourceInDB
+--
+-- Description: update DB elements for MTO source
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .updateSourceInDB()
+
+  !this.updateSourceInDB(||)
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      updateSourceInDB
+--
+-- Description: update DB elements for MTO source
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .updateSourceInDB(!comment is STRING)
+
+  !tmpce = !!ce
+
+  -- delete "removed?" Check MTO version
+  !allowDelete = false
+  !mtostru = object mtostructure(!this.mtodef)
+
+  !mtovers = !mtostru.mtolastver
+  if !mtovers.badref() then
+    -- no version existing
+    !allowDelete = true
+  endif
+
+  -- $P ALLOW DELETE: $!allowDelete
+
+  -- create / update :MTOSRCELE - "usedFlag"
+  if !this.diffDeleted.empty().not() then
+    do !mem value !this.mtoSource.member
+      if !mem.acttype eq |:MTOSRCELE| then
+        if !mem.purpose eq |PIPE| then
+          -- clean up
+          if !mem.func neq |removed| and !mem.func neq |*new*| then
+            !mem.func = ||
+          endif
+          if !mem.desc.matchwild(|*//*|).not() then
+            !mem.desc = |- // -|
+          endif
+          -- set removed info
+          if !mem.:MTODESLNK.badref().not() then
+            -- get Design Element?
+            !ind = !this.diffDeleted.find(!mem.:MTODESLNK)
+            if !ind.empty().not() then
+              !mem.func = |removed|
+              if !allowDelete then
+                $!mem
+                DELETE $!!ce.acttype
+                handle any
+                  !message = !!error.text
+                  $P $!message
+                endhandle
+              endif
+            endif
+          endif
+        endif
+      endif
+    enddo
+  endif
+
+  if !this.diffNew.empty().not() then
+
+    -- reactivate removed???
+    do !mem value !this.mtoSource.member
+      if !mem.acttype eq |:MTOSRCELE| then
+        if !mem.purpose eq |PIPE| and !mem.func eq |removed| then
+          if !mem.:MTODESLNK.badref().not() then
+            -- get Design Element?
+            !ind = !this.diffNew.find(!mem.:MTODESLNK)
+            if !ind.empty().not() then
+              -- reactivate !mem
+              !mem.func = ||
+              !ind.sort().invert()
+              do !i value !ind
+                !this.diffNew.remove(!i)
+              enddo
+              if !this.diffNew.unset() then
+                break
+              endif
+            endif
+          endif
+        endif
+      endif
+    enddo
+
+    -- create rest of elements
+    $!this.mtoSource
+    LAST MEMBER
+    
+    do !pipe value !this.diffNew
+      NEW :MTOSRCELE
+      !!ce.:MTODESLNK = !pipe
+      !!ce.:MTODESLNKNAME = !pipe.name
+      !!ce.PURPOSE = 'PIPE'
+      if !comment eq || then
+        !!ce.func = |*new*|
+      else
+        !!ce.func = !comment
+      endif
+    enddo
+
+  endif
+
+  $!tmpce
+
+  -- update DB list
+  !this.evaluateSource(|DB|)
+
+  -- compare again
+  !this.compareSource()
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getPipeListForGrid
+--
+-- Description: return a ARRAY for a NETGRID
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getPipeListForGrid() is ARRAY
+
+  !tmpce = !!ce
+
+  !pipes = array()
+  !netData = array()
+
+  -- get grid data from existing
+  do !mem value !this.mtoSource.member
+    if !mem.acttype eq |:MTOSRCELE| then
+      if !mem.purpose eq |PIPE| then
+        if !mem.:MTODESLNK.badref().not() then
+          -- get Design Element?
+          !dbpipe = !mem.:MTODESLNK
+          !pipes.append(!dbpipe)
+
+          !data = array()
+          !data.append(!dbpipe.refno.string())
+          !data.append(!dbpipe.namn)
+
+          if !mem.desc.matchwild(|*//*|).not() then
+            !data.append(|- // -|)
+          else
+            !data.append(!mem.desc)
+          endif
+
+          !ind = !this.diffDeleted.find(!dbpipe)
+          if !ind.empty() then
+            !data.append(!mem.func)
+          else
+            !data.append(|removed|)
+          endif
+
+          !netData.append(!data)
+        else
+          -- get Design Element?
+          !pipeName = !mem.:MTODESLNKNAME
+
+          !data = array()
+          !data.append('=0/0')
+          !data.append(!pipeName)
+          !data.append(!mem.desc)
+          if !mem.func.matchwild(|* CONFIRMED *|) then
+            !data.append(|*** PIPE deleted - CONFIRMED ***|)
+          else
+            !data.append(|*** PIPE deleted ***|)
+          endif
+
+          !netData.append(!data)
+        endif
+      endif
+    endif
+  enddo
+
+  -- get grid data from "new"
+  if !this.diffNew.empty().not() then
+    do !dbpipe value !this.diffNew
+      !ind = !pipes.find(!dbpipe)
+
+      if !ind.empty().not() then
+        !netData[$!ind[1]][4] = |*new*|
+      else
+        -- new element not in DB stored
+        !data = array()
+        !data.append(!dbpipe.refno.string())
+        !data.append(!dbpipe.namn)
+        !data.append(|- // -|)
+        !data.append(|*new*|)
+        
+        !pipes.append(!dbpipe)
+        !netData.append(!data)
+      endif
+    enddo
+  endif
+
+  $!tmpce
+
+  return !netData
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      updateVersionForSourceInDB
+--
+-- Description: save last used mto version to MTO source elements
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .updateVersionForSourceInDB(!version is STRING)
+
+  -- if !this.same.not() then
+  --   return error 1 |MTO Source is not correct. Version is not updated in DB!|
+  -- endif
+
+  -- Update PIPEs used for MTO
+
+  !srcpipes = !this.getSourcePipesFromDB()
+
+  -- create / update :MTOSRCELE - "usedFlag"
+  do !mem value !this.mtoSource.member
+    if !mem.acttype eq |:MTOSRCELE| then
+      if !mem.purpose eq |PIPE| then
+        if !mem.:MTODESLNK.badref().not() then
+          -- get Design Element?
+          !ind = !srcpipes.find(!mem.:MTODESLNK)
+          if !ind.empty().not() then
+            -- used!!
+            !mem.desc = !version
+            -- remove "*new* info"
+            !mem.func = ||
+          endif
+        endif
+      endif
+    endif
+  enddo
+
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      .getSourcePipesFromDB
+--
+-- Description: save last used mto version to MTO source elements
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getSourcePipesFromDB() is ARRAY
+
+  !pipes = array()
+  
+  do !pipe value !this.sourcePipesDB
+    if !pipe.badref().not() then
+      !pipes.append(!pipe)
+    endif
+  enddo
+
+  !pipes.unique()
+
+  return !pipes
+
+endmethod

@@ -1,0 +1,215 @@
+
+if defined(!!mtoBulkPrint) then
+  -- OK
+else
+  RETURN
+endif
+
+!!printerror = array()
+
+!docs = !!mtoBulkPrint.getDocumentCount()
+
+-- !mess = !docs.string() + | Reports to create found, run in mode TTY?|
+-- !ans = !!alert.question(!mess)
+-- if !ans eq |NO| then
+
+if not(!!mtoBulkPrint.tty) then
+  !!mtoBulkPrint.runPrint()
+
+  !exppath = !!lastmtoexportpath + |\|
+  syscom |start $!exppath&|
+  
+  !!mtoBulkPrint.delete()
+  
+  if !!printerror.empty().not() then
+    !!printerror.sortunique()
+    !file = object file(|%PDMSUSER%\MTO-print-log.txt|)
+    !file.writefile(|OVER|,!!printerror)
+    SYSCOM |START %PDMSUSER%\MTO-print-log.txt&|
+    !!alert.error(|One or more Error occured, please check LOG file!|)
+  else
+--    !!alert.message(|Print Job Finished!|)
+    SYSCOM 'echo x=msgbox("Print Job Finished!",0+64+0,"Zeppelin MTO Report")  > %tmp%\tmp.vbs'
+    SYSCOM 'cscript //nologo %tmp%\tmp.vbs'
+    SYSCOM 'del %tmp%\tmp.vbs'
+  endif
+  
+  RETURN
+endif
+
+
+!ans = !!alert.confirm(|Do you want to a Savework before Printing? A modul switch is needed!|)
+if !ans eq |YES| then
+  Savework
+endif
+
+MONITOR
+DEV TTY
+
+DESIGN
+
+-- !!mtoBulkPrint.runPrint()
+
+  !single = !!mtoBulkPrint.single
+  
+  if !single neq TRUE then
+    
+--    $P Printing MTOs single
+    do !jj index !!mtoBulkPrint.mtovers
+      
+      !mtovers = !!mtoBulkPrint.mtovers[$!jj]
+      if !!mtoBulkPrint.mtos.empty() then
+        !mtos = !mtovers.member
+      else
+        !mtos = !!mtoBulkPrint.mtos[$!jj]
+      endif
+      !mtos.unique()
+      
+      !pref = !mtovers.owner.func
+      if !pref.empty() or !pref.unset() then
+        !pref = |MTOprefixMissing-|
+      endif
+      
+      !mtospack = array()
+      !singlemtos = array()
+      
+      do !i index !mtos
+        
+        !dbmto = !mtos[$!i]
+        
+        !chk = !i / 20
+        !chkabs = !chk.int()
+        if !chk eq !chkabs then
+          !mtospack.append(!dbmto)
+          !singlemtos.append(!mtospack)
+          !mtospack = array()
+        else
+          !mtospack.append(!dbmto)
+        endif
+        
+      enddo
+      if !mtospack.empty().not() then
+        !singlemtos.append(!mtospack)
+      endif
+      
+      do !i index !singlemtos
+        !!mtoBulkPrint.printSingle(!singlemtos[$!i], !pref)
+        QUIT MONITOR
+	      DESIGN
+      enddo
+      
+    enddo
+    
+--    $P Single Ende
+    
+    QUIT MONITOR
+    DEV GRA
+    
+    DESIGN
+    
+    !!mtoBulkPrint.delete()
+    
+    !exppath = !!lastmtoexportpath + |\|
+    syscom |start $!exppath&|
+    
+    if !!printerror.empty().not() then
+      !!printerror.sortunique()
+      !file = object file(|%PDMSUSER%\MTO-print-log.txt|)
+      !file.writefile(|OVER|,!!printerror)
+      SYSCOM |START %PDMSUSER%\MTO-print-log.txt&|
+      !!alert.error(|One or more Error occured, please check LOG file!|)
+    else
+--      !!alert.message(|Print Job Finished!|)
+      SYSCOM 'echo x=msgbox("Print Job Finished!",0+64+0,"Zeppelin MTO Report")  > %tmp%\tmp.vbs'
+      SYSCOM 'cscript //nologo %tmp%\tmp.vbs'
+      SYSCOM 'del %tmp%\tmp.vbs'
+    endif
+    
+  endif
+  
+  if !single eq TRUE then
+    
+--    $P Printing MTOs mixed
+    !versz = !!mtoBulkPrint.mtovers.size()
+    
+    do !jj index !!mtoBulkPrint.mtovers
+      
+      !mtovers = !!mtoBulkPrint.mtovers[$!jj]
+      if !!mtoBulkPrint.mtos.empty() then
+        !mtos = !mtovers.member
+      else
+        !mtos = !!mtoBulkPrint.mtos[$!jj]
+      endif
+      !mtos.unique()
+      
+      !pipemtos = array()
+      !singlemtos = array()
+      
+      !pref = !mtovers.owner.func
+      if !pref.empty() or !pref.unset() then
+        !pref = |MTOprefixMissing-|
+      endif
+      
+      !mtospack = array()
+      
+      do !i index !mtos
+        !dbmto = !mtos[$!i]
+        
+        if !dbmto.acttype eq |:MTOPIPE| then
+          !pipemtos.append(!dbmto)
+        else
+          !chk = !i / 20
+          !chkabs = !chk.int()
+          if !chk eq !chkabs then
+            !mtospack.append(!dbmto)
+            !singlemtos.append(!mtospack)
+            !mtospack = array()
+          else
+            !mtospack.append(!dbmto)
+          endif
+        endif
+        
+      enddo
+      if !mtospack.empty().not() then
+        !singlemtos.append(!mtospack)
+      endif
+      
+      do !i index !singlemtos
+        !!mtoBulkPrint.printSingle(!singlemtos[$!i], !pref)
+        QUIT MONITOR
+	      DESIGN
+      enddo
+      
+      !!mtoBulkPrint.printMulti(!mtovers, !pipemtos, !pref)
+
+    enddo
+
+    $P Multi Ende
+    
+    QUIT MONITOR
+    DEV GRA
+
+    DESIGN
+
+    !!mtoBulkPrint.delete()
+
+    !exppath = !!lastmtoexportpath + |\|
+    syscom |start $!exppath&|
+    
+    if !!printerror.empty().not() then
+      !!printerror.sortunique()
+      !file = object file(|%PDMSUSER%\MTO-print-log.txt|)
+      !file.writefile(|OVER|,!!printerror)
+      SYSCOM |START %PDMSUSER%\MTO-print-log.txt&|
+      !!alert.error(|One or more Error occured, please check LOG file!|)
+    else
+--      !!alert.message(|Print Job Finished!|)
+      SYSCOM 'echo x=msgbox("Print Job Finished!",0+64+0,"Zeppelin MTO Report")  > %tmp%\tmp.vbs'
+      SYSCOM 'cscript //nologo %tmp%\tmp.vbs'
+      SYSCOM 'del %tmp%\tmp.vbs'
+    endif
+    
+  endif
+
+
+  

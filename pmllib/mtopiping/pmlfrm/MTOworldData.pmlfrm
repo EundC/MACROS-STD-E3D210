@@ -1,0 +1,182 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year AVEVA GmbH
+--
+-- File:            MTOworldData.pmlfrm
+--   Type:          Form Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        Design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/01 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Form for MTO managing 
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+!tmpce = !!ce
+:MTOWLD
+handle any
+  RETURN
+endhandle
+
+!mtowld = !!ce
+!att = !!ce.attributes()
+!udas = array()
+do !i index !att
+  if !att[$!i].substring(1,1) eq |:| then
+    !udas.append(!att[$!i])
+  endif
+enddo
+
+$!tmpce
+
+if !udas.empty() then
+  RETURN
+endif
+
+setup form !!MTOworldData at xr 0.25 yr 0.25 DIALOG DOCK
+  
+  title |AVEVA MTO World data|
+  
+-- Form members:
+  
+  member .world                    is DBREF
+  member .udas                     is ARRAY
+  
+  frame .frame00 anchor all
+    path down
+    do !i index !udas
+      !uda = !udas[$!i]
+      para .txt$!i text |$!uda|
+      text .textfield$!i at xmin .txt$!i ymax .txt$!i -0.25 width 35 is STRING
+    enddo
+  exit
+  
+exit
+
+!this.world = !mtowld
+!this.udas = !udas
+
+-- End of form definition for !!MTOworldData
+
+------------------------------------------------------------------------
+--
+-- Method:      MTOworldData
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .MTOworldData()
+  
+  !this.initcall = |!this.init()|
+  
+  -- !this.cancelcall = |kill !!MTOworldData|
+  -- !this.quitcall = |kill !!MTOworldData|
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      init()
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Value
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .init()
+  
+  !tmpce = !!ce
+  :MTOWLD
+  handle any
+    RETURN
+  endhandle
+  
+  !this.world = !!ce
+  
+  do !i index !this.udas
+    
+    !val.delete()
+    handle any
+    endhandle
+    
+    !uda = !this.udas[$!i]
+    !field = |textfield| + !i.string() + |.callback|   
+    !this.$!field = |!this.change(|
+    !val = !this.world.$!uda
+    
+    !str = !val.string()
+    !field = |textfield| + !i.string() + |.val|   
+    !this.$!field = !str
+    
+  enddo
+  
+  $!tmpce
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:   change
+--
+-- Description: Change DB
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      Attribute
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+define method .change(!gadget is GADGET, !action is STRING)
+  
+  !ind = !gadget.name().upcase().after('TEXTFIELD')
+  !i = !ind.real()
+  
+  !uda = !this.udas[$!i]
+  !val = !gadget.val
+  
+  --$P $!uda = $!val
+  !this.world.$!uda = !val
+  handle(2,794)
+    !real = !val.real()
+    handle any
+      $P $!!error.text
+      RETURN
+    endhandle
+    
+    !this.world.$!uda = !real
+    handle any
+      $P $!!error.text
+      RETURN
+    endhandle
+    
+  endhandle
+  
+endmethod
+-- End of method definition
+

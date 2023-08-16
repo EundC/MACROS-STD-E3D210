@@ -1,0 +1,706 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoviewmethods.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.03.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/03/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   Methods for "mtoviews" object
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtoviewmethods
+  
+  -- Object Owner
+  member .currentView   is FORM
+  
+  -- Items for "Bauteile" grid
+  member .items         is ARRAY
+  -- selected items
+  member .itemselected  is ARRAY
+  
+endobject
+
+-- End of object definition for mtoviewmethods
+
+------------------------------------------------------------------------
+--
+-- Method:      mtoviewmethods
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtoviewmethods()
+  
+  !this.currentView = !this.owner()
+  handle any
+  endhandle
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- FORM Methods
+--
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+--
+-- Method:      tabevent
+--
+-- Description: tab change event
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      GADGET      Frame
+--    2   R      STRING      Action
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .tabevent(!tab is GADGET, !action is STRING)
+  
+  !this.items = array()
+  
+  if !action.upcase() eq |SHOWN| and not(matchwild(!tab.tag.upcase(),|*MTO*|)) then
+    -- leaving MTO to ITEM view. Prepare ITEM view
+    
+    !ind = !this.currentView.MTOLISTGRID.GETSELECTEDROWTAGS()
+    if !ind.size() neq 1 then
+      -- Clear any existing data
+      !this.currentView.itemlistGrid.clearGrid()
+      !this.currentView.itemlistGridSelection.clear()
+    else
+      !this.items = !this.currentView.mtoitems[$!ind[1]]
+      !this.loadItemGrid()
+    endif
+    
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:   loadMtoGrid
+--
+-- Description: Put MTO revisions into the data grid
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  1   R      STRING      MTO Type
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadMtoGrid(!unitStyle is BOOLEAN)
+  
+--   !debug = false
+   !debug = true
+  
+$(
+Ptnhead
+:MTO-QTY-NEW 200
+:MTO-QTY-OLD 0
+:MTO-QTY-DIFF 200
+:MTO-UID 20120014
+:MTO-REV  
+:MTO-SPREF /C30DJ0H_R7/20120014:scst-Schlauchst-vz-224
+:MTO-DESC01 Jacob- Schlauchanschlusstutzen
+:MTO-DESC02 Jacob-Hoseconnection
+:MTO-DESC03 Jacob- Schlauchanschlusstutzen
+:MTO-STD01 unset
+:MTO-STD02 unset
+:MTO-STD03 unset
+:MTO-DIM01 unset
+:MTO-DIM02 224mm
+:MTO-DIM03 unset
+:MTO-MATE01 unset
+:MTO-MATE02 224mm
+:MTO-MATE03 unset
+:MTO-ERPNO01 20120014
+:MTO-ERPNO02 209630
+:MTO-ERPNO03 unset
+:MTO-SWEIG unset
+:MTO-P1BORE unset
+:MTO-P2BORE unset
+:MTO-P3BORE unset
+:MTO-P4BORE unset
+:MTO-WTHK1 unset
+:MTO-WTHK2 unset
+:MTO-WTHK3 unset
+:MTO-WTHK4 unset
+$)
+  
+  !headings = array()
+  
+  if !debug then
+    if !unitStyle then
+      !headings.append(|Refno|)
+      !headings.append(|Ptnhead|)
+      !headings.append(|:MTO-QTY-NEW-UNIT|)
+      !headings.append(|:MTO-QTY-OLD-UNIT|)
+      !headings.append(|:MTO-QTY-DIFF-UNIT|)
+      !headings.append(|:MTO-UID|)
+      !headings.append(|:MTO-REV|)  
+      !headings.append(|:MTO-SPREF|)
+      !headings.append(|:MTO-DESC01|)
+      !headings.append(|:MTO-DESC02|)
+      !headings.append(|:MTO-DESC03|)
+      !headings.append(|:MTO-STD01|)
+      !headings.append(|:MTO-STD02|)
+      !headings.append(|:MTO-STD03|)
+      !headings.append(|:MTO-DIM01|)
+      !headings.append(|:MTO-DIM02|)
+      !headings.append(|:MTO-DIM03|)
+      !headings.append(|:MTO-MATE01|)
+      !headings.append(|:MTO-MATE02|)
+      !headings.append(|:MTO-MATE03|)
+      !headings.append(|:MTO-ERPNO01|)
+      !headings.append(|:MTO-ERPNO02|)
+      !headings.append(|:MTO-ERPNO03|)
+      !headings.append(|:MTO-SWEIG|)
+      !headings.append(|:MTO-P1BORE-UNIT|)
+      !headings.append(|:MTO-P2BORE-UNIT|)
+      !headings.append(|:MTO-P3BORE-UNIT|)
+      !headings.append(|:MTO-P4BORE-UNIT|)
+      !headings.append(|:MTO-WTHK1-UNIT|)
+      !headings.append(|:MTO-WTHK2-UNIT|)
+      !headings.append(|:MTO-WTHK3-UNIT|)
+      !headings.append(|:MTO-WTHK4-UNIT|)
+    else
+      !headings.append(|Refno|)
+      !headings.append(|Ptnhead|)
+      !headings.append(|:MTO-QTY-NEW|)
+      !headings.append(|:MTO-QTY-OLD|)
+      !headings.append(|:MTO-QTY-DIFF|)
+      !headings.append(|:MTO-UID|)
+      !headings.append(|:MTO-REV|)  
+      !headings.append(|:MTO-SPREF|)
+      !headings.append(|:MTO-DESC01|)
+      !headings.append(|:MTO-DESC02|)
+      !headings.append(|:MTO-DESC03|)
+      !headings.append(|:MTO-STD01|)
+      !headings.append(|:MTO-STD02|)
+      !headings.append(|:MTO-STD03|)
+      !headings.append(|:MTO-DIM01|)
+      !headings.append(|:MTO-DIM02|)
+      !headings.append(|:MTO-DIM03|)
+      !headings.append(|:MTO-MATE01|)
+      !headings.append(|:MTO-MATE02|)
+      !headings.append(|:MTO-MATE03|)
+      !headings.append(|:MTO-ERPNO01|)
+      !headings.append(|:MTO-ERPNO02|)
+      !headings.append(|:MTO-ERPNO03|)
+      !headings.append(|:MTO-SWEIG|)
+      !headings.append(|:MTO-P1BORE|)
+      !headings.append(|:MTO-P2BORE|)
+      !headings.append(|:MTO-P3BORE|)
+      !headings.append(|:MTO-P4BORE|)
+      !headings.append(|:MTO-WTHK1|)
+      !headings.append(|:MTO-WTHK2|)
+      !headings.append(|:MTO-WTHK3|)
+      !headings.append(|:MTO-WTHK4|)
+    endif
+  else
+    !headings.append(|Refno|)
+    !headings.append(|Pos|)
+    !headings.append(|Qty[new]|)
+    !headings.append(|Qty[old]|)
+    !headings.append(|Diff|)
+    !headings.append(|UID|)
+    !headings.append(|Rev|)  
+    !headings.append(|Spref|)
+    !headings.append(|Description 1|)
+    !headings.append(|Description 2|)
+    !headings.append(|Description 3|)
+    !headings.append(|Standard 1|)
+    !headings.append(|Standard 2|)
+    !headings.append(|Standard 3|)
+    !headings.append(|Dimension 1|)
+    !headings.append(|Dimension 2|)
+    !headings.append(|Dimension 3|)
+    !headings.append(|Material 1|)
+    !headings.append(|Material 2|)
+    !headings.append(|Material 3|)
+    !headings.append(|ERP No. 1|)
+    !headings.append(|ERP No. 2|)
+    !headings.append(|ERP No. 3|)
+    !headings.append(|S.weight|)
+    !headings.append(|P1 Bore|)
+    !headings.append(|P2 Bore|)
+    !headings.append(|P3 Bore|)
+    !headings.append(|P4 Bore|)
+    !headings.append(|Wthk 1|)
+    !headings.append(|Wthk 2|)
+    !headings.append(|Wthk 3|)
+    !headings.append(|Wthk 4|)    
+  endif 
+  
+  
+  !rows = array()
+  do !i index !this.currentView.mtolines
+    !line = array()
+    !data = !this.currentView.mtolines[$!i]
+
+    !line.append(!data.string())
+    !line.append(!data.ptnhead)
+    
+    if !unitStyle then
+      !qtynews = !data.:MTO-QTY-NEW-UNIT
+      !qtyolds = !data.:MTO-QTY-OLD-UNIT
+      !qtydifs = !data.:MTO-QTY-DIFF-UNIT
+    else
+      !gtype = !data.:mto-spref.catref.gtype
+      handle any
+        !gtype = |Unknown|
+      endhandle
+      if !gtype eq |TUBE| then
+        -- !!check = !data
+        !qtynew = !data.:MTO-QTY-NEW.value() / 1000
+        !qtyold = !data.:MTO-QTY-OLD.value() / 1000
+        !qtydif = !data.:MTO-QTY-DIFF.value() / 1000
+        !unit = |m|
+        !qtynews = !qtynew.string(|D2|).replace(|.|,|,|) + !unit
+        !qtyolds = !qtyold.string(|D2|).replace(|.|,|,|) + !unit
+        !qtydifs = !qtydif.string(|D2|).replace(|.|,|,|) + !unit
+      else
+        !unit = |Stk|
+        !qtynew = !data.:MTO-QTY-NEW
+        !qtyold = !data.:MTO-QTY-OLD
+        !qtydif = !data.:MTO-QTY-DIFF
+        !qtynews = !qtynew.string().replace(|.|,|,|) + !unit
+        !qtyolds = !qtyold.string().replace(|.|,|,|) + !unit
+        !qtydifs = !qtydif.string().replace(|.|,|,|) + !unit
+      endif
+    endif
+    
+    !line.append(!qtynews)
+    !line.append(!qtyolds)
+    !line.append(!qtydifs)
+    
+    !line.append(!data.:MTO-UID)
+    !line.append(!data.:MTO-REV)
+    !spref = !data.:MTO-SPREF.name
+    handle any
+      !spref = |badref|
+    endhandle
+    !line.append(!spref)
+    !line.append(!data.:MTO-DESC01)
+    !line.append(!data.:MTO-DESC02)
+    !line.append(!data.:MTO-DESC03)
+    !line.append(!data.:MTO-STD01)
+    !line.append(!data.:MTO-STD02)
+    !line.append(!data.:MTO-STD03)
+    !line.append(!data.:MTO-DIM01)
+    !line.append(!data.:MTO-DIM02)
+    !line.append(!data.:MTO-DIM03)
+    !line.append(!data.:MTO-MATE01)
+    !line.append(!data.:MTO-MATE02)
+    !line.append(!data.:MTO-MATE03)
+    !line.append(!data.:MTO-ERPNO01)
+    !line.append(!data.:MTO-ERPNO02)
+    !line.append(!data.:MTO-ERPNO03)
+    !line.append(!data.:MTO-SWEIG)
+    if !unitStyle then
+      !line.append(!data.:MTO-P1BORE-UNIT)
+      !line.append(!data.:MTO-P2BORE-UNIT)
+      !line.append(!data.:MTO-P3BORE-UNIT)
+      !line.append(!data.:MTO-P4BORE-UNIT)
+      !line.append(!data.:MTO-WTHK1-UNIT)
+      !line.append(!data.:MTO-WTHK2-UNIT)
+      !line.append(!data.:MTO-WTHK3-UNIT)
+      !line.append(!data.:MTO-WTHK4-UNIT)
+    else
+      !line.append(!data.:MTO-P1BORE)
+      !line.append(!data.:MTO-P2BORE)
+      !line.append(!data.:MTO-P3BORE)
+      !line.append(!data.:MTO-P4BORE)
+      !line.append(!data.:MTO-WTHK1)
+      !line.append(!data.:MTO-WTHK2)
+      !line.append(!data.:MTO-WTHK3)
+      !line.append(!data.:MTO-WTHK4)
+    endif
+
+    !rows.append(!line)
+  enddo
+  
+  -- Clear any existing data
+  !this.currentView.mtolistGrid.clearGrid()
+  !this.currentView.mtolistGridSelection.clear()
+  
+  -- Set headings
+  !title = 'MTO'
+
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+
+  -- Get revisions
+  !nds = object NETDATASOURCE(!title, !headings, !rows)
+  !this.currentView.mtolistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.currentView.mtolistGrid.autofitcolumns()
+  
+  -- hide dbref
+  !this.currentView.mtolistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+  
+  !this.currentView.mtolistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:   loadItemGrid
+--
+-- Description: Put Items for MTO selection to Item grid
+--
+-- Method Type: Procedure
+-- [#] [R/RW] [Data Type] [Description]
+--  -
+-- Return:
+-- [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadItemGrid()
+  
+  !debug = false
+  -- !debug = true
+  
+  -- Clear any existing data
+  !this.currentView.itemlistGrid.clearGrid()
+  !this.currentView.itemlistGridSelection.clear()
+  
+  -- Set headings
+  !title = 'Revisionen'
+  !attributes = array()
+  !attributes.append(|REFNO|)
+  !attributes.append(|Name|)
+  !attributes.append(|PIPE|)
+  !attributes.append(|BRANCH|)
+  !attributes.append(|SPEC of SPREF|)
+  !attributes.append(|SPREF|)
+  !attributes.append(|DETREF|)
+  !attributes.append(|MATREF|)
+
+  !headings = array()
+  !headings.append(|RefNo|)
+  !headings.append(|Name|)
+  !headings.append(|Pipe|)
+  !headings.append(|Branch|)
+  !headings.append(|Spec|)
+  !headings.append(|Spref|)
+  !headings.append(|Detref|)
+  !headings.append(|Matref|)
+  
+  using namespace  'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace  'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  -- Get revisions
+  !nds = object NETDATASOURCE(!title, !attributes, !headings, !this.items)
+  !this.currentView.itemlistGrid.bindToDataSource(!nds)
+  
+  -- configure grid presentation
+  !this.currentView.itemlistGrid.autofitcolumns()
+  
+  -- hide dbref
+  !this.currentView.itemlistGrid.SETCOLUMNVISIBILITY(1,FALSE)
+  
+  !this.currentView.itemlistGrid.AUTOFITCOLUMNS()
+  
+endmethod
+-- End of method definition
+
+------------------------------------------------------------------------
+--
+-- Method:      setpopupmto
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Handler data
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setpopupmto(!a is ARRAY)
+  
+  !this.currentView.mtolistGridSelection = !a[2]
+  handle(2,752)
+    !menu = !this.currentView.newMenu('listPopupMTO')
+      handle(61,566)
+        !menu = !this.currentView.listPopupMTO
+--        !menu.clear()
+      endhandle
+    !menu.clear()
+  elsehandle none
+    !menu = !this.currentView.newMenu('listPopupMTO')
+      handle(61,566)
+        !menu = !this.currentView.listPopupMTO
+        !menu.clear()
+      endhandle
+      !menu.add(|callback|, |Export to XLS|,   |!this.control.exportXLS()|)
+  endhandle
+  
+  !this.currentView.netmtolistFrame.setPopup(!this.currentView.listPopupMTO)
+  !this.currentView.netmtolistFrame.showPopup(!a[0], !a[1])
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setpopupitem
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      ARRAY       Handler data
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setpopupitem(!a is ARRAY)
+  
+  !this.currentView.itemlistGridSelection = !a[2]
+  handle(2,752)
+    !menu = !this.currentView.newMenu('listPopupitem')
+      handle(61,566)
+        !menu = !this.currentView.listPopupitem
+--        !menu.clear()
+      endhandle
+    !menu.clear()
+  elsehandle none
+    !menu = !this.currentView.newMenu('listPopupitem')
+      handle(61,566)
+        !menu = !this.currentView.listPopupitem
+        !menu.clear()
+      endhandle
+      !menu.add(|callback|, |Add to 3D view|,    |!this.control.add3d()|)
+      !menu.add(|callback|, |Remove 3D view|,    |!this.control.rem3d()|)
+      !menu.add(|callback|, |Zoom 3D view|,      |!this.control.zoom()|)
+      !menu.add(|callback|, |Goto|,              |!this.control.goto()|)
+  endhandle
+  
+  !this.itemselected = !this.currentView.itemlistGridSelection
+  
+  !this.currentView.netitemlistFrame.setPopup(!this.currentView.listPopupitem)
+  !this.currentView.netitemlistFrame.showPopup(!a[0], !a[1])
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      add3d
+--
+-- Description: add item selection to 3dview
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      GADGET      Frame
+--    2   R      STRING      Action
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .add3d()
+  
+  do !item value !this.itemselected
+    ADD $!item
+  enddo
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      rem3d
+--
+-- Description: add item selection to 3dview
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      GADGET      Frame
+--    2   R      STRING      Action
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .rem3d()
+  
+  do !item value !this.itemselected
+    REM $!item
+  enddo
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      goto
+--
+-- Description: goto first item selected
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      GADGET      Frame
+--    2   R      STRING      Action
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .goto()
+  
+  if !this.itemselected.size() neq 1 then
+    !!alert.warning(|More than 1 item selected, using first item!|)
+  endif
+  
+  $!this.itemselected[1]
+  handle any
+  endhandle
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      zoom
+--
+-- Description: zoom 3d view to first item selected
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      GADGET      Frame
+--    2   R      STRING      Action
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .zoom()
+  
+  if !this.itemselected.size() neq 1 then
+    !!alert.warning(|More than 1 item selected, using first item!|)
+  endif
+  
+  ADD $!this.itemselected[1]
+  handle any
+    RETURN
+  elsehandle none
+    !item = !this.itemselected[1].dbref()
+    handle any
+      RETURN
+    endhandle
+  endhandle
+  
+  !view =  !!gphviews.activeview
+  if !view.unset() then
+    !view =  !!gphviews.views[1]
+  endif
+  !!gphviews.limits(!view,!item)
+  !a[1] = 0.57735
+  !a[2] = 0.57735
+  !a[3] = -0.57735
+  !view.direction = !a
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      exportxls
+--
+-- Description: exportxls
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .exportxls()
+  
+  !mto = !this.currentView.mto
+  if !mto.acttype eq |:MTOSUMM| then
+    if !mto.:MTO-SPREF.unset() then
+      !tmp = |SUMM-MTO-| + !mto.namn.replace(|/|,|_|)
+    else
+      !tmp = |PCL-MTO-| +  !mto.:MTO-SPREF.namn
+    endif
+  elseif !mto.acttype eq |:MTOPIPE| then
+    !tmp = |PIPE-MTO-| + !mto.:MTODESLNK.namn
+  endif  
+
+  !mtovers = !mto.owner
+  !mtorev = !mtovers.:MTO-REV
+  !mtover = !mtovers.:MTO-VERS
+  
+  !version =  |_Vers-| + !mtover.string() + |_Rev-| + !mtorev
+  !tmp = !tmp + !version + |.xls|
+  !tmp = !tmp.replace(|'|,||)
+  !tmp = !tmp.replace(|:|,||)
+  !tmp = !tmp.replace(|"|,||)
+  !tmp = !tmp.replace(|{|,||)
+  !tmp = !tmp.replace(|}|,||)
+  !tmp = !tmp.replace(|[|,||)
+  !tmp = !tmp.replace(|]|,||)
+  !tmp = !tmp.replace(|/|,|-|)
+  !tmp = !tmp.replace(|\|,|-|)
+  !tmp = !tmp.replace(| |,||)
+  !xlsname = !tmp
+  
+  !!fileBrowser('%aveva_design_user%', !xlsname, 'Save file', false, '!!tmpfilename = !!fileBrowser.file.name()')
+  
+  if defined(!!tmpfilename) then
+    !file = !!tmpfilename
+    !!tmpfilename.delete()
+    !this.currentView.mtolistGrid.SAVEGRIDTOEXCEL(!file)
+  endif
+  
+endmethod

@@ -1,0 +1,578 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoextractor.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.02.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO controller
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+-- 
+
+define object mtoextractor
+  
+  -- Source data
+  member .pipes         is ARRAY
+  member .mtoconfig     is MTOCONFIGURATION
+  member .mtodef        is MTOSETTINGS
+  
+  -- BRAN MEM multi dimensional arrays (per PIPE)
+  member .mtosortdata   is ARRAY
+  member .mtouiddata    is ARRAY
+  member .mtorefnodata  is ARRAY
+  member .mtosprefdata  is ARRAY
+  member .mtospecdata   is ARRAY
+  member .mtoqtydata    is ARRAY
+
+  -- BOLTING multi dimensional arrays (per PIPE)
+  member .mtoboltobj    is ARRAY
+  member .mtoboltdata   is ARRAY
+  member .mtoboltsort   is ARRAY
+  member .mtoboltuid    is ARRAY
+  member .mtoboltitem   is ARRAY
+  member .mtoboltspec   is ARRAY
+  
+  
+  -- simple unqiue arrays
+  member .allsort       is ARRAY
+  member .alluid        is ARRAY
+  member .allspec       is ARRAY
+
+  member .allboltsort   is ARRAY
+  member .allboltuid    is ARRAY
+  member .allboltspec   is ARRAY
+  
+endobject
+
+-- End of object definition for mtoextractor
+
+------------------------------------------------------------------------
+--
+-- Method:      mtoextractor
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtoextractor()
+  
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      runextract
+--
+-- Description: extract data
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .runextract()
+  
+  !this.mtosortdata.clear()
+  !this.mtouiddata.clear()
+  !this.mtorefnodata.clear()
+  !this.mtosprefdata.clear()
+  !this.mtospecdata.clear()
+  !this.mtoqtydata.clear()
+  
+  !this.mtoboltobj.clear()
+  !this.mtoboltdata.clear()
+  !this.mtoboltsort.clear()
+  !this.mtoboltuid.clear()
+  !this.mtoboltitem.clear()
+  !this.mtoboltspec.clear()
+  
+  !this.allsort.clear()
+  !this.alluid.clear()
+  !this.allspec.clear()
+  
+  !this.allboltsort.clear()
+  !this.allboltuid.clear()
+  !this.allboltspec.clear()
+  
+  PROMPT |Step 1 / 5 - Extract data from PIPEs|
+  
+  do !i index !this.pipes
+    
+    !pipe = !this.pipes[$!i]
+    
+    !this.getbmemdata(!pipe)
+    if !this.mtodef.bolts eq TRUE and !this.mtodef.siklaMode neq |ONLY| then
+      !this.getbolts(!pipe)
+    endif
+    
+    !pro = !i / !this.pipes.size() * 100
+    !!fmsys.setprogress(!pro)
+    
+  enddo
+
+  !this.allsort.sortunique()
+  !this.alluid.sortunique()
+  !this.allspec.sortunique()
+
+  PROMPT ||
+  !!fmsys.setprogress(0)
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getbmemdata
+--
+-- Description: Get BMEM data for DB Element
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getbmemdata(!pipe is DBREF)
+  
+  !mtosortdata = array()
+  !mtouiddata = array()
+  !mtorefnodata = array()
+  !mtosprefdata = array()
+  !mtospecdata = array()
+  !mtoqtydata = array()
+  
+  var !bmem coll all BRAN MEMBER for $!pipe
+  
+  if !this.mtodef.bends eq TRUE then
+    !ind = !this.mtoconfig.sorttypes[1].find('TUBI')
+    !repl = !this.mtoconfig.sorttypes[2][$!ind[1]]
+    !ind = !this.mtoconfig.sorttypes[1].find('BEND')
+    !this.mtoconfig.sorttypes[2][$!ind[1]] = !repl
+  endif
+  
+  !addtubi = array()
+  
+  do !i index !bmem
+    
+    !elem = !bmem[$!i].dbref()
+
+    -- SIKLA Mode?
+    if !this.mtodef.siklaMode eq |INCLUDE| then
+      -- do nothing!
+    elseif !this.mtodef.siklaMode eq |EXCLUDE| then
+      -- check for SIKLA Element, remove if !elem is SIKLA
+      !siklaFlag = !!mtoCheckElementIsSikla(!elem)
+      if !siklaFlag eq TRUE then
+        skip
+      endif
+    elseif !this.mtodef.siklaMode eq |ONLY| then
+      -- check for SIKLA Element, remove if !elem is NOT SIKLA
+      !siklaFlag = !!mtoCheckElementIsSikla(!elem)
+      if !siklaFlag neq TRUE then
+        skip
+      endif
+    endif
+
+    -- exlude weld?
+    if !elem.type eq |WELD| then
+      
+      -- add tubi - get allow from optionfile or attribute!
+      -- if !elem.styp eq |WELB| or !elem.styp eq |WELA| then
+      !skey = !elem.detref.skey
+      handle any
+        !skey = ||
+        !info = |WARNING - Welds: "| + !elem.name + |", SKEY not set...|
+        !!errorlog.append(!info)
+      endhandle
+
+      if !skey.trim() eq |WF| then
+        -- check WELD is connected to a FLAN with LOOSE true!
+        !connToLooseFlan = !!mtoCheckWeldLoose(!elem)
+        if !connToLooseFlan.not() then
+          -- $P DEBUG: Add Tubi WELD - WF
+          !addtubi.append(!elem)
+        endif
+      endif
+      -- endif
+      if !this.mtodef.welds.not() then
+        SKIP
+      endif
+    endif
+
+    -- add TUBI for LOOSE FLANGE!
+    if !elem.type eq |FLAN| and !elem.loose eq TRUE then
+      -- add tubi - get allow from optionfile or attribute!
+      !connToTubiWeld = !!mtoCheckFlanLoose(!elem)
+      if !connToTubiWeld then
+        -- $P DEBUG: Add Tubi FLAN - LOOSE
+        !addtubi.append(!elem)
+      endif
+    endif
+    
+    -- add TUBI for LAP JOINT STUBEND FLANGE!
+    $(
+      LJSE is ignored by ISOGEN :(
+    if !elem.type eq |LJSE| and !elem.loose eq TRUE then
+      -- add tubi - get allow from optionfile or attribute!
+      !addtubi.append(!elem)
+    endif
+    $)
+
+    -- exludeatta?
+    if !this.mtodef.attas.not() then
+      if !elem.type eq |ATTA| then
+        SKIP
+      endif
+    endif
+
+
+    if !this.mtodef.mtoc eq TRUE then
+      if !elem.type eq |TUBI| then
+        !tubmem = !elem.name.after(' of ').dbref()
+        !mtoc = !tubmem.mtot
+        handle(2,201)
+          !mtoc = !tubmem.mtoh
+        endhandle
+      else
+        !mtoc = !elem.mtoc
+      endif
+      
+      if !mtoc.trim().upcase() eq || or !mtoc.trim().upcase() eq |ON| then
+        -- OK
+      else
+        -- ignore
+        SKIP
+      endif
+    endif
+    
+    !spref = !elem.spref
+    if !spref.badref() then
+      !info = |ERROR - | + !elem.name + | - SPREF not set...|
+      !!errorlog.append(!info)
+      SKIP
+    endif
+
+    -- add LIMBO check - warning only
+    if !spref.ownlst[2].name.matchwild(|*LIMBO*|) then
+      !info = |WARNING - Limbospec: "| + !spref.name + |", SPREF is member of LIMBOSPEC "| + !spref.ownlst[2].name + |"|
+      !!errorlog.append(!info)
+    endif
+
+    
+    !eleuid = !elem
+    
+    -- HOSE flag
+    !hoseFlag = false
+    if !spref.name.matchwild(|*:HOSE*|) then
+      !hoseFlag = true
+    endif
+
+    -- check addup BENDs to PIPE, but not for HOSE
+    if !hoseFlag.not() then
+      if !this.mtodef.bends eq TRUE then
+        if !elem.type eq |BEND| then
+          !spref = !elem.lstube
+          !eleuid = !spref
+        endif
+      endif
+    endif
+    
+    -- get quantitiy
+    if !elem.type eq |TUBI| then
+      !qty = !elem.itle
+      
+      -- 2022.06.03 - HZO - Check gtype of catref?
+      !cataGtype = !elem.catref.gtype
+      handle any
+      	!cataGtype = |CATREF is BADREF|
+      endhandle
+      if !cataGtype neq |TUBE| then
+        !info = |ERROR - | + !elem.name + | - GTYPE of LSTUBE is wrong. GTYPE of CATREF is "| + !cataGtype + |" ...|
+        !!errorlog.append(!info)
+        SKIP
+      endif
+
+      -- elseif !elem.type eq |BEND| or !elem.type eq |FTUB| then
+    elseif !elem.type eq |BEND| then
+      if !this.mtodef.bends eq TRUE then
+        -- check addup BENDs Fitlen to PIPEs, but not for HOSE
+        if !hoseFlag then
+          !qty = 1
+        else
+          !qty = !elem.fitlen
+        endif
+      else
+        !qty = 1
+      endif
+    else
+      !qty = 1
+    endif
+    
+    !suid = !this.mtoconfig.getsortuid(!spref)
+    handle 1
+      !info = |ERROR - | + !elem.name + | - Could not get Sort UID - "| + !!error.text + |"|
+      !!errorlog.append(!info)
+      SKIP
+    endhandle
+    !muid = !this.mtoconfig.getmtouid(!eleuid)
+    
+    if !elem.type eq |FTUB| then
+      -- add length to uid?
+      if !this.mtodef.ftubs eq TRUE then
+
+        !strlengUnit = ||
+        -- new unit format?
+        if !!mtoFormatHandler.useALLflag then
+          !strlengUnit = !elem.fitlen.string(!!mtoFormatHandler.ALL)
+          handle any
+          endhandle
+        else
+          !strlengUnit = !elem.fitlen.string(!!mtoFormatHandler.LENGTH)
+          handle any
+          endhandle
+        endif
+
+        if !strlengUnit eq || then
+          !strleng = !elem.fitlen.string('D0')
+        else
+          !strleng = !strlengUnit
+        endif
+        !muid = !muid + |-| + !strleng
+        !suid = !suid + |-| + !strleng
+      endif
+    endif
+    
+    if !!mtoCheckElementIsSikla(!spref) eq TRUE then
+      -- SIKLA Part! Use PRTWLD
+      !spec = !spref.ownlst[1].name
+    else
+      !spec = !spref.ownlst[2].name
+      handle any
+        -- 2022.01.26 - maybe gpart without spec...
+        !spec = !spref.owner.name
+      endhandle
+    endif
+    
+    !mtosortdata.append(!suid)
+    !mtouiddata.append(!muid)
+    !mtorefnodata.append(!elem)
+    !mtosprefdata.append(!spref)
+    !mtospecdata.append(!spec)
+    !mtoqtydata.append(!qty)
+    
+    !this.allsort.append(!suid)
+    !this.alluid.append(!muid)
+    !this.allspec.append(!spec)
+  enddo
+  
+  -- add tubi?
+  do !elem value !addtubi
+    
+    !spref = !elem.lstube
+    !eleuid = !spref
+    
+    -- !qty = 200mm
+    !qty = !elem.allowance
+    if !qty eq 0 then
+      !qty = !this.mtodef.allowance
+    endif
+    
+    -- $P DEBUG: Add Allowance: $!qty
+
+    !suid = !this.mtoconfig.getsortuid(!spref)
+    handle 1
+      !info = |ERROR - | + !elem.name + | - Could not get Sort UID - "| + !!error.text + |"|
+      !!errorlog.append(!info)
+      SKIP
+    endhandle
+    !muid = !this.mtoconfig.getmtouid(!eleuid)
+
+    !spec = !spref.ownlst[2].name
+    
+    !mtosortdata.append(!suid)
+    !mtouiddata.append(!muid)
+    !mtorefnodata.append(!elem)
+    !mtosprefdata.append(!spref)
+    !mtospecdata.append(!spec)
+    !mtoqtydata.append(!qty)
+    
+    !this.allsort.append(!suid)
+    !this.alluid.append(!muid)
+    !this.allspec.append(!spec)
+    
+  enddo
+  
+  
+  !this.mtosortdata.append(!mtosortdata)
+  !this.mtouiddata.append(!mtouiddata)
+  !this.mtorefnodata.append(!mtorefnodata)
+  !this.mtosprefdata.append(!mtosprefdata)
+  !this.mtospecdata.append(!mtospecdata)
+  !this.mtoqtydata.append(!mtoqtydata)
+  
+  !this.allsort.sortunique()
+  !this.alluid.sortunique()
+  !this.allspec.sortunique()  
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getbolts
+--
+-- Description: Get bolts for DB Element
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getbolts(!pipe is DBREF)
+
+  -- SIKLA Mode?
+  if !this.mtodef.siklaMode eq |ONLY| then
+    -- No bolting !
+    return
+  endif
+
+  var !uni UNIQUEID
+  !alpfile = |%aveva_design_user%\boltlog-| + !uni + |.tmp|
+  ALPHA LOG /$!alpfile OVER
+  
+  !tmpbdata = array()
+  
+  !all = array()
+  
+  var !a coll all bran mem with matchwild(p1con,'F*') for $!pipe
+  do !j index !a
+    !all.append(!a[$!j].dbref())
+  enddo
+  var !b coll all bran mem with matchwild(p2con,'F*') for $!pipe
+  do !j index !b
+    !all.append(!b[$!j].dbref())
+  enddo
+  var !c coll all bran mem with matchwild(p3con,'F*') for $!pipe
+  do !j index !c
+    !all.append(!c[$!j].dbref())
+  enddo
+  var !d coll all bran mem with matchwild(p4con,'F*') for $!pipe
+  do !j index !d
+    !all.append(!d[$!j].dbref())
+  enddo
+  
+  !all.unique()
+  
+  !bolt = object extractbolt()
+  !bolts = array()
+  
+--  PROMPT |Get Bolts|
+  
+  do !i index !all
+    !bolt.extractbolt(!all[$!i])
+    !bolt.getbolts()
+    handle 1
+      !txt = !!error.text
+      if defined(!!bolterrorlog) then
+        !!bolterrorlog.append(!txt)
+      endif
+      SKIP
+    endhandle
+    -- elements with out bolts removed
+    -- (wrong blrf sets, ...)
+    if !bolt.data.size() neq 0 then
+      !tmpbdata.append(!bolt)
+    endif
+--    !pro = !i / !all.size() * 100
+--    !!fmsys.setprogress(!pro)
+  enddo
+  
+  
+  !this.mtoboltobj.append(!tmpbdata)
+  
+  -- extract bolt object data?
+  !mtoboltdata = array()
+  !mtoboltsort = array()
+  !mtoboltuid  = array()
+  !mtoboltitem = array()
+  !mtoboltspec = array()
+  
+  do !extbolt value !tmpbdata
+    !item = !extbolt.item
+    !spec = !item.spref.ownlst[2].name
+    do !bolt value !extbolt.data
+    
+      !suid = !this.mtoconfig.getsortuid(!bolt)
+      handle 1
+        !info = |ERROR - | + !item.name + | - Could not get Sort UID for BOLT- "| + !!error.text + |"|
+        !!errorlog.append(!info)
+        SKIP
+      endhandle
+
+      !muid = !this.mtoconfig.getmtouid(!bolt)
+      
+      !mtoboltdata.append(!bolt)
+      !mtoboltsort.append(!suid)
+      !mtoboltuid.append(!muid)
+      !mtoboltitem.append(!item)
+      !mtoboltspec.append(!spec)
+      
+      !this.allboltsort.append(!suid)
+      !this.allboltuid.append(!muid)
+      !this.allboltspec.append(!spec)
+    enddo
+  enddo
+  
+  !this.mtoboltdata.append(!mtoboltdata)
+  !this.mtoboltsort.append(!mtoboltsort)
+  !this.mtoboltuid.append(!mtoboltuid )
+  !this.mtoboltitem.append(!mtoboltitem)
+  !this.mtoboltspec.append(!mtoboltspec)
+  
+  !this.allboltsort.sortunique()
+  !this.allboltuid.sortunique()
+  !this.allboltspec.sortunique()
+  
+--  PROMPT ||
+--  !!fmsys.setprogress(0)
+
+  ALPHA LOG END
+  
+  !file = object file(!alpfile)
+  !error = !file.readfile()
+  if defined(!!bolterrorlog) then
+    !!bolterrorlog.appendarray(!error)
+  endif
+  
+endmethod

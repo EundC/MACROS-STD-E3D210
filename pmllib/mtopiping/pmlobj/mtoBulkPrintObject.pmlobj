@@ -1,0 +1,770 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoBulkPrintObject.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.02.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO controller
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtoBulkPrintObject
+  
+  -- Member
+  member .mtovers    is ARRAY
+  member .mtos       is ARRAY
+  
+  -- member .repfil     is FILE
+--  member .SAPSUMMrepfil     is FILE
+--  member .SAPPIPErepfil     is FILE
+--  member .SUMMrepfil        is FILE
+--  member .PIPErepfil        is FILE
+  
+  member .reports    is mtoreporttemplate
+  
+  member .single     is BOOLEAN
+  member .tty        is BOOLEAN
+  member .userfile   is STRING  
+  
+  member .pdf        is BOOLEAN
+  member .xls        is BOOLEAN
+  member .sap        is BOOLEAN
+  
+endobject
+
+-- End of object definition for mtoBulkPrintObject
+
+------------------------------------------------------------------------
+--
+-- Method:      mtoBulkPrintObject
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtoBulkPrintObject()
+  
+  if defined(!!mtoBulkPrint) then
+    -- OK
+  else
+    !!mtoBulkPrint = !this
+    !!mtoBulkPrint.single = TRUE
+    !!mtoBulkPrint.tty = FALSE
+    !!mtoBulkPrint.userfile = |myPipeCollection|
+    !!mtoBulkPrint.pdf = true
+--    !!mtoBulkPrint.xls = true
+--    !!mtoBulkPrint.sap = true
+    !!mtoBulkPrint.xls = false
+    !!mtoBulkPrint.sap = false
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      runPrint
+--
+-- Description: run report
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .runPrint()
+  
+  !single = !this.single
+  
+  if !single neq TRUE then
+    
+--    $P Printing MTOs single
+    do !jj index !this.mtovers
+      
+      !mtovers = !this.mtovers[$!jj]
+      if !this.mtos.empty() then
+        !mtos = !mtovers.member
+      else
+        !mtos = !this.mtos[$!jj]
+      endif
+      !mtos.unique()
+      
+      !pref = !mtovers.owner.func
+      if !pref.empty() or !pref.unset() then
+        !pref = |MTOprefixMissing-|
+      endif
+      
+      PROMPT 'Exporting...'
+      !!fmsys.setprogress(0)
+      
+      !this.printSingle(!mtos, !pref)
+        
+    enddo
+
+    PROMPT ''
+    
+  else
+    
+--    $P Printing MTOs mixed
+    !versz = !this.mtovers.size()
+    
+    do !jj index !this.mtovers
+      
+      PROMPT 'Printing MTO Version $!jj of $!versz'
+      
+      !mtovers = !this.mtovers[$!jj]
+      if !this.mtos.empty() then
+        !mtos = !mtovers.member
+      else
+        !mtos = !this.mtos[$!jj]
+      endif
+      !mtos.unique()
+      
+      !pipemtos = array()
+      !singlemtos = array()
+      
+      !pref = !mtovers.owner.func
+      if !pref.empty() or !pref.unset() then
+        !pref = |MTOprefixMissing-|
+      endif
+      
+      !mtospack = array()
+      
+      do !i index !mtos
+        !dbmto = !mtos[$!i]
+        
+        if !dbmto.acttype eq |:MTOPIPE| then
+          !pipemtos.append(!dbmto)
+        else
+          !singlemtos.append(!dbmto)
+        endif
+      enddo
+      
+      PROMPT '$!jj of $!versz - Printing Single Files... Step 1 / 2'
+      !!fmsys.setprogress(0)
+      
+      !this.printSingle(!singlemtos, !pref)
+      
+      PROMPT '$!jj of $!versz - Printing Multi Files... Step 2 / 2'
+      !!fmsys.setprogress(0)
+      
+      !this.printMulti(!mtovers, !pipemtos, !pref)
+      
+    enddo
+
+    PROMPT ''
+    
+  endif
+  
+  !!fmsys.setprogress(0)
+  
+  !exppath = !!lastmtoexportpath + |\|
+  syscom |start $!exppath&|
+  
+--  $!tmpce
+  
+  kill !!MTOprintRD
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      printSingle
+--
+-- Description: run report
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .printSingle(!mtos is ARRAY, !pref is STRING)
+  
+  if !mtos.empty() then
+    RETURN
+  endif
+  
+  import 'ReportingAddin'
+  handle ANY
+  endhandle
+  
+  using namespace 'Aveva.Pdms.Reporting'
+  handle ANY
+  endhandle
+  using namespace 'Aveva.Core.Reporting'
+  handle ANY
+  endhandle
+
+  var !dev dev
+  if !dev.lowcase() eq 'graphics' then
+    !tty = false
+  else
+    !tty = true
+  endif
+  
+  if defined(!!report) then
+    --
+  else
+    !!report = object PMLReport()
+  endif
+  
+  !exppath = !!lastmtoexportpath + |\|
+  
+  !elements = object ARRAY()    
+  
+  if !tty.not() then
+    !i = 0
+    !sz = !mtos.size()
+  endif
+  
+  do !dbmto value !mtos
+
+    if !tty.not() then
+      !i = !i + 1
+      !pro = !i / !sz * 100
+      !!fmsys.setprogress(!pro)
+    endif
+    
+    -- start mto printing
+    !mtovers = !dbmto.owner
+    !released = !mtovers.:MTO-RELEASED
+    
+    -- print Status as Watermark?
+    !param = array()
+    !param[1] = |Status|
+    !paramValues = array()
+    
+    
+    if !released.not() then
+      !paramValues[1] = |P R E L I M I N A R Y|
+    else
+      !paramValues[1] = | |
+    endif
+    
+    !!report.ADDPARAMETERS(!Param,!ParamValues)
+    -- end watermark
+    
+    if !dbmto.isnamed.not() then
+      !name = !mtovers.name + '/' + !dbmto.sequ.string()
+      !dbmto.name = !name
+      handle any
+        !mess = |ERROR - could not set name for | + !dbmto.name + | - NOT printed!|
+        !!printerror.append(!mess)
+        SKIP
+      endhandle
+    endif
+    
+    !pipename = ||
+    
+    if !dbmto.acttype eq |:MTOPIPE| then
+      !saprep = !this.reports.SAPPIPErepfil
+      !name = !dbmto.:MTODESLNKNAME.substring(2)
+      handle any
+        !name = !dbmto.:MTODESLNK.namn
+        handle any
+          !mess = |WARNING - Could not create Filename by :MTODESLNK or :MTODESLNKNAME for | + !dbmto.name + | !|
+          !!printerror.append(!mess)
+          !name = !dbmto.namn
+        elsehandle none
+          !pipename = !name
+        endhandle
+      elsehandle none
+        !pipename = !name
+      endhandle
+    else
+      !saprep = !this.reports.SAPSUMMrepfil
+      if !dbmto.:MTO-SPREF.unset() then
+        !name = |OverallSummary|
+      else
+        if !dbmto.:MTO-SPREF.badref() then
+          !mess = |WARNING - Could not create Filename by :MTO-SPREF for | + !dbmto.name + | !|
+          !!printerror.append(!mess)
+          !name = !dbmto.namn
+        else
+          !name = !dbmto.:MTO-SPREF.namn
+        endif
+      endif
+    endif
+    
+    !tmp = !pref + |-| + !name
+    
+    !tmp = !tmp.trim().replace(| |,|-|)
+    !tmp = !tmp.replace(|'|,||)
+    !tmp = !tmp.replace(|*|,||)
+    !tmp = !tmp.replace(|.|,|-|)
+    !tmp = !tmp.replace(|"|,||)
+    !tmp = !tmp.replace(|{|,||)
+    !tmp = !tmp.replace(|}|,||)
+    !tmp = !tmp.replace(|[|,||)
+    !tmp = !tmp.replace(|]|,||)
+    !tmp = !tmp.replace(|/|,|-|)
+    !tmp = !tmp.replace(|\|,|-|)
+    
+    !mtoname = !tmp
+    
+    !mtosubrev = !dbmto.:MTO-PIPE-REV
+--    !mtorev = !dbmto.owner.:MTO-REV
+    !mtover = !dbmto.owner.:MTO-VERS
+    
+    !released = !dbmto.owner.:MTO-RELEASED
+    -- set export file
+    if !released eq TRUE then
+      !file = !exppath + !mtoname + |_Rev_| + !mtosubrev
+      !sapfile = !exppath + |SAP-| + !mtoname + |_Rev_| + !mtosubrev
+    else
+      !pre = |Preliminary-|
+      !file = !exppath + !pre + !mtoname + |_Vers_| + !mtover.string('D0') + |_Rev_| + !mtosubrev
+    endif      
+    
+    !ancestorElements = array()
+    !ancestorElements.append(!dbmto.name)
+    
+    !!report.removeScope()
+    !!report.addScope(!ancestorElements, !elements)
+    
+--    q var !ancestorElements
+--    q var !elements
+    
+    
+--    $P Printing MTO $!file - PDF
+    
+    if !dbmto.acttype eq |:MTOPIPE| then
+      !chkrepfile = !this.reports.PIPErepfil
+    else
+      !chkrepfile = !this.reports.SUMMrepfil
+    endif
+    
+    !exists = !chkrepfile.exists()
+    handle any
+      !mess = !!error.text
+      !!printerror.append(!mess)
+    elsehandle none
+      if !exists then
+        !repfile = !chkrepfile.fullname()
+      else
+        !!printerror.append('Report template not set!')
+      endif
+    endhandle    
+    
+--    q var !pipename
+    
+--    $P Single: $!repfile
+  
+    !expfile = !file.trim() + |.pdf|
+
+    if !this.pdf then
+      !!report.exportAsPdf(!repfile, |$!expfile|)
+    endif
+    
+--    !!checkRep = !!report
+    
+--    $P Printing MTO $!file - XLSX
+    
+    !expfile = !file.trim() + |.xlsx|
+    
+    -- 2021-01 - HZO new in E3D3.1
+    -- ExportAsXls(STRING reportFileName, STRING destinationFilename, STRING exportMode, STRING pageRange, STRING sheetName, STRING textExportMode, BOOL showGridLines)
+    if !this.xls then
+      if !pipename neq || then
+        !!report.exportAsXLSX(!repfile, |$!expfile|, '', '', !pipename, '', FALSE )
+      else
+        !!report.exportAsXLSX(!repfile, |$!expfile|)
+      endif
+    endif
+    
+    
+    
+--    !expfile = !file + |.xls|
+    
+    if !released and !this.sap then
+      
+--      $P SAP
+      
+      if !saprep.unset() or !saprep.exists().not() then
+        !mess = |ERROR - SAP Report Template missing!|
+        !!printerror.append(!mess)
+        SKIP
+      endif
+      !expfile = !sapfile.trim() + |.xlsx|
+      
+--      !!report.exportAsXLSX(!saprep.fullname(), |$!expfile|)
+
+      -- 2021-01 - HZO new in E3D3.1
+      -- ExportAsXls(STRING reportFileName, STRING destinationFilename, STRING exportMode, STRING pageRange, STRING sheetName, STRING textExportMode, BOOL showGridLines)
+      if !pipename neq || then
+        !!report.exportAsXLSX(!saprep.fullname(), |$!expfile|, '', '', !pipename, '', FALSE )
+      else
+        !!report.exportAsXLSX(!saprep.fullname(), |$!expfile|)
+      endif
+      
+--      $P $!saprep $!expfile
+      
+    endif
+    
+  enddo
+  
+  $(
+  
+  !chkfile = object file(!expfile)
+  !filesize = 0
+  
+--  $P look for I
+  
+  do !i from 1 to 10000
+    if !chkfile.exists() then
+      !newsize = !chkfile.size()
+      if !newsize eq 0 then
+        SKIP
+      else
+        if !filesize eq !newsize then
+--          $P I = $!i
+          BREAK
+        else
+          !filesize = !newsize
+        endif
+      endif
+    endif
+  enddo
+  
+  $)
+  
+--  isodraftmode
+--  exit
+  
+--  !!report.delete()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      printMulti
+--
+-- Description: print mtos into 1 file
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .printMulti(!mtovers is DBREF, !mtos is ARRAY, !pref is STRING)
+
+  if !mtos.empty() then
+    RETURN
+  endif
+  
+  import 'ReportingAddin'
+  handle ANY
+  endhandle
+  
+  using namespace 'Aveva.Pdms.Reporting'
+  handle ANY
+  endhandle
+  using namespace 'Aveva.Core.Reporting'
+  handle ANY
+  endhandle
+  
+  if defined(!!report) then
+    --
+  else
+    !!report = object PMLReport()
+  endif
+
+  var !dev dev
+  if !dev.lowcase() eq 'graphics' then
+    !tty = false
+  else
+    !tty = true
+  endif
+  
+  -- set report data
+  !exppath = !!lastmtoexportpath + |\|
+  
+  !elements = object ARRAY()
+  
+  !chkfilename = FALSE
+  
+  if !this.userfile eq || then
+    !name = |AllPipes|
+  else
+    !name = !this.userfile
+    !chkfilename = TRUE
+  endif
+  
+  !tmp = !pref + |-| + !name
+  
+  !tmp = !tmp.trim().replace(| |,|-|)
+  !tmp = !tmp.replace(|'|,||)
+  !tmp = !tmp.replace(|.|,|-|)
+  !tmp = !tmp.replace(|"|,||)
+  !tmp = !tmp.replace(|{|,||)
+  !tmp = !tmp.replace(|}|,||)
+  !tmp = !tmp.replace(|[|,||)
+  !tmp = !tmp.replace(|]|,||)
+  !tmp = !tmp.replace(|/|,|-|)
+  !tmp = !tmp.replace(|\|,|-|)
+  
+  !mtoname = !tmp
+  
+  !mtorev = !mtovers.:MTO-REV
+  !mtover = !mtovers.:MTO-VERS
+  
+  !released = !mtovers.:MTO-RELEASED
+  -- set export file
+  do !i from 1 to 999
+    !index = !i.string('I3')
+    if !released eq TRUE then
+      if !chkfilename eq TRUE then
+        !file = !exppath + !mtoname + !index + |_GrpRev_| + !mtorev
+        !sapfile = !exppath + |SAP-| + !mtoname + !index + |_GrpRev_| + !mtorev
+        !chkfile = object file(!file + |.pdf|)
+        if !chkfile.exists() then
+          SKIP
+        else
+          !chkfile = object file(!sapfile + |.xlsx|)
+          if !chkfile.exists() then
+            SKIP
+          else
+            BREAK
+          endif
+        endif
+      else
+        !file = !exppath + !mtoname + |_GrpRev_| + !mtorev
+        !sapfile = !exppath + |SAP-| + !mtoname + |_GrpRev_| + !mtorev
+        BREAK
+      endif
+    else
+      if !chkfilename eq TRUE then
+        !pre = |Preliminary-|
+        !file = !exppath + !pre + !mtoname + !index + |_Vers_| + !mtover.string('D0') + |_GrpRev_| + !mtorev
+        !chkfile = object file(!file + |.pdf|)
+        if !chkfile.exists() then
+          SKIP
+        else
+          BREAK
+        endif
+      else
+        !pre = |Preliminary-|
+        !file = !exppath + !pre + !mtoname + |_Vers_| + !mtover.string('D0') + |_GrpRev_| + !mtorev
+      endif
+    endif      
+  enddo
+--  PROMPT 'Printing Multi Files... Step 2 / 2'
+--  !!fmsys.setprogress(0)
+  !sz = !mtos.size()
+
+  !ancestorElements = array()
+  
+  if !tty.not() then
+    !sz = !mtos.size()
+  endif
+  
+  do !i index !mtos
+
+    if !tty.not() then
+      !pro = !i / !sz * 95
+      !!fmsys.setprogress(!pro)
+    endif
+    
+    !dbmto = !mtos[$!i]
+    
+    -- start mto printing
+    !mtovers = !dbmto.owner
+    
+    if !dbmto.isnamed.not() then
+      !name = !mtovers.name + '/' + !dbmto.sequ.string()
+      !dbmto.name = !name
+      handle any
+        !mess = |ERROR - could not set name for | + !dbmto.name + | - NOT printed!|
+        !!printerror.append(!mess)
+        SKIP
+      endhandle
+    endif
+    
+    !ancestorElements.append(!dbmto.name)
+
+    !pro = !i / !sz * 80
+--    !!fmsys.setprogress(!pro)
+  
+  enddo
+  
+  !!report.removeScope()
+  !!report.addScope(!ancestorElements, !elements)
+  
+--  $P Reportfile: $!chkrepfil
+  
+--  $P Printing MTO $!file - PDF
+  
+  !chkrepfile = !this.reports.PIPErepfil
+  
+  !exists = !chkrepfile.exists()
+  handle any
+    !mess = !!error.text
+    !!printerror.append(!mess)
+  elsehandle none
+    if !exists then
+      !repfile = !chkrepfile.fullname()
+    else
+      !!printerror.append('Report template not set!')
+    endif
+  endhandle
+  
+--  $P Multi: $!repfile
+  
+  !expfile = !file.trim() + |.pdf|
+  if !this.pdf then
+    !!report.exportAsPdf(!repfile, |$!expfile|)
+  endif
+  
+--  !!fmsys.setprogress(90)  
+--  $P Printing MTO $!file - XLSX
+  
+  !expfile = !file.trim() + |.xlsx|
+  if !this.xls then
+    !!report.exportAsXLSX(!repfile, |$!expfile|)
+  endif
+  
+--  !!fmsys.setprogress(100)  
+  
+--  !expfile = !file + |.xls|
+
+  
+  if !released AND !this.sap then
+    !saprep = !this.reports.SAPPIPErepfil
+    if !saprep.unset() or !saprep.exists().not() then
+      !mess = |ERROR - SAP Report Template missing!|
+      !!printerror.append(!mess)
+    else
+      !expfile = !sapfile.trim() + |.xlsx|
+      !!report.exportAsXLSX(!saprep.fullname(), |$!expfile|)
+    endif
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getDocumentCount
+--
+-- Description: calculate amount of documents
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getDocumentCount() is REAL
+  
+  !single = !this.single
+  
+  if !single eq TRUE then
+    
+    !size = 0
+    
+--    $P Printing MTOs single
+    do !jj index !this.mtovers
+      
+      !mtovers = !this.mtovers[$!jj]
+      if !this.mtos.empty() then
+        !mtos = !mtovers.member
+      else
+        !mtos = !this.mtos[$!jj]
+      endif
+      !mtos.unique()
+      
+      !released = !mtovers.:MTO-RELEASED
+      if !released eq TRUE then
+        !add = !mtos.size() * 3
+      else
+        !add = !mtos.size() * 2
+      endif
+      
+      !size = !size + !add
+        
+    enddo
+    
+  else
+    
+--    $P Printing MTOs mixed
+    !versz = !this.mtovers.size()
+    
+    !size = 0
+    
+    do !jj index !this.mtovers
+      
+      !mtovers = !this.mtovers[$!jj]
+      if !this.mtos.empty() then
+        !mtos = !mtovers.member
+      else
+        !mtos = !this.mtos[$!jj]
+      endif
+      !mtos.unique()
+
+      !released = !mtovers.:MTO-RELEASED
+      if !released eq TRUE then
+        !fkt = 3
+      else
+        !fkt = 2
+      endif
+      
+      !pipemtos = array()
+      
+      do !i index !mtos
+        !dbmto = !mtos[$!i]
+        
+        if !dbmto.acttype eq |:MTOPIPE| then
+          !pipemtos.append(!dbmto)
+        else
+          !size = !size + !fkt
+        endif
+        
+      enddo
+      
+      if !pipemtos.empty().not() then
+        !size = !size + !fkt
+      endif
+      
+    enddo
+    
+  endif 
+  
+  RETURN !size
+  
+endmethod

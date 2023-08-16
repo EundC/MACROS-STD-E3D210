@@ -1,0 +1,178 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtopreview.pmlfnc
+--   Type:          Function Definition
+--   Group:         Graphic View
+--     Keyword:     VIEW
+--   Module:        common
+--   Replaces:
+--
+-- Author:          N.Holmes
+-- Created:         Tue Jan 20 10:04:50 WAT 1998
+--
+--
+-- Description:
+--  MTO DB View
+--
+------------------------------------------------------------------------
+--
+-- Function Type:   Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      REAL        Form number
+-- Return:
+--   [Data Type] [Description]
+--    FORM        Form created
+--
+------------------------------------------------------------------------
+
+-- Define function
+define function !!mtopreview(!number is REAL) is FORM
+  
+  import 'GridControl'
+  handle any
+  endhandle
+
+  using namespace 'Aveva.Core.Presentation'
+  handle any
+  endhandle
+  using namespace 'Aveva.Pdms.Presentation'
+  handle any
+  endhandle
+  
+  -- Initialise Variables
+  !form   = '!!mtopreview' & !number
+  
+  -- Define form
+  setup form $!<form> at xr 0.25 yr 0.25 DIALOG RESI
+    
+    !title = |AVEVA MTO View (| + !number.string('D0') + |)|
+    $!<form>.formTitle      = !title
+    $!<form>.initCall       = ''
+    $!<form>.formRevision   = ' $Revision: 1.0 $ '
+--    $!<form>.CallBack       = '$P FORMCALL'
+--    $!<form>.quitCall       = '$P QUITCALL'
+--    $!<form>.cancelCall     = '$P CANCELCALL'
+--    $!<form>.killingCall    = '$P KILLINGCALL'
+    $!<form>.quitCall       = '!!mtoViews.close(' & !form & ')'
+    !formString = !form.string()
+    $!<form>.cancelCall     = 'kill $!<formString>'
+    $!<form>.killingCall    = ''
+    
+    -- Body of form definition
+    
+    frame .frame0 anchor all
+      path down
+      para .mto1  width 8
+      para .mto2  at xmax .mto1 ymin .mto1 width 14
+      para .mto3  at xmax .mto2 ymin .mto1 width 40
+      para .mto4  at xmax .mto3 ymin .mto1 width 40
+      
+      frame .frameTAB TABSET anchor ALL at xmin .mto1
+        frame .frame1 'MTO Daten:' at xmin .frameTAB +1 ymax +0.25  height 7 width 120
+          container .netmtolistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+        exit
+        frame .frame2 'Bauteile: ' at xmin .frameTAB +1 ymax +0.25  height 7 width 120
+          container .netitemlistFrame nobox PMLNetCONTROL 'NET'  DOCK FILL
+        exit
+      exit
+    exit
+
+    -- Form Members
+    
+    -- MTO Sort order (full)
+    member .mto          is DBREF
+    member .mtolines     is ARRAY
+    member .mtoitems     is ARRAY
+    
+    --  using namespace 'Aveva.Core.Presentation'
+    using namespace 'Aveva.Pdms.Presentation'
+    
+    -- my .Net control
+    member .mtolistGrid            is NETGRIDCONTROL
+    member .mtolistGridSelection   is ARRAY
+    
+    member .itemlistGrid            is NETGRIDCONTROL
+    member .itemlistGridSelection   is ARRAY
+      
+    -- Form Information
+    member .number   is REAL
+    
+    -- Form Methods
+    member .control  is mtoviewmethods
+    
+  exit
+  -- End of form definition
+
+  
+  -- Initialise Form Data
+  !formName        = $!<form>
+  !formName.number = !number
+  
+  -- Initialise Form Settings
+  
+  !formName.control.currentview = !this
+  
+  !tabcall = |!!| + !formName.string() + |.control.tabevent(|
+  !formName.frameTAB.callback = !tabcall
+  !formName.frame1.callback = !tabcall
+  !formName.frame2.callback = !tabcall
+  
+  using namespace 'Aveva.Pdms.Presentation'
+
+-- *** MTO GRID ***
+
+  -- Create instance of .Net control
+  !formName.mtolistGrid = object NETGRIDCONTROL()
+  
+  !formName.mtolistGrid.addeventhandler('OnPopup', !formName.control, 'setpopupMTO')
+--  !formName.mtolistGrid.addeventhandler('AfterSelectChange', !formName, 'mtoselect')
+--  !formName.mtolistGrid.addeventhandler('AfterCellUpdate', !formName, 'mtochange')
+--  !formName.mtolistGrid.addeventhandler('BeforeCellUpdate', !formName, 'mtoupdate')
+
+  -- Add .Net control to PML container
+  !formName.netmtolistFrame.control = !formName.mtolistGrid.handle()
+  
+   -- configure grid presentation
+  !formName.mtolistGrid.editableGrid(FALSE)
+  !formName.mtolistGrid.columnExcelFilter(TRUE)
+  !formName.mtolistGrid.outlookGroupStyle(FALSE)
+  !formName.mtolistGrid.fixedHeaders(FALSE)
+  !formName.mtolistGrid.fixedRows(FALSE)
+  !formName.mtolistGrid.errorIcon(TRUE)
+  !formName.mtolistGrid.clearGrid()
+  !formName.mtolistGrid.singlerowselection(TRUE)
+  !formName.mtolistGrid.columnSummaries(FALSE)
+
+-- *** ITEM GRID ***
+
+  -- Create instance of .Net control
+  !formName.itemlistGrid = object NETGRIDCONTROL()
+
+  !formName.itemlistGrid.addeventhandler('OnPopup', !formName.control, 'setpopupITEM')
+--  !formName.itemlistGrid.addeventhandler('AfterSelectChange', !formName, 'mtoselect')
+--  !formName.itemlistGrid.addeventhandler('AfterCellUpdate', !formName, 'mtochange')
+--  !formName.itemlistGrid.addeventhandler('BeforeCellUpdate', !formName, 'mtoupdate')
+
+  -- Add .Net control to PML container
+  !formName.netitemlistFrame.control = !formName.itemlistGrid.handle()
+
+   -- configure grid presentation
+  !formName.itemlistGrid.editableGrid(FALSE)
+  !formName.itemlistGrid.columnExcelFilter(TRUE)
+  !formName.itemlistGrid.outlookGroupStyle(FALSE)
+  !formName.itemlistGrid.fixedHeaders(FALSE)
+  !formName.itemlistGrid.fixedRows(FALSE)
+  !formName.itemlistGrid.errorIcon(TRUE)
+  !formName.itemlistGrid.clearGrid()
+  !formName.itemlistGrid.singlerowselection(FALSE)
+  !formName.itemlistGrid.columnSummaries(FALSE)  
+  
+  
+  
+  return !formName
+
+endfunction
+-- End of function definition for !!mtopreview

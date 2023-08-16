@@ -1,0 +1,359 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtoviews.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.03.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/03/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   mto view handler, open / close / show / hide
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtoviews
+  
+  -- Views
+  member .views         is ARRAY
+  
+  -- Active view
+  member .activeView    is FORM
+
+  
+endobject
+
+-- End of object definition for mtoviews
+
+------------------------------------------------------------------------
+--
+-- Method:      mtoviews
+--
+-- Description: Create global instance of object
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+-- Define method
+define method .mtoviews()
+  
+  !this.globalInstance()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      globalInstance
+--
+-- Description: Create global instance of object
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+-- Define method
+define method .globalInstance()
+  
+  -- Create Global Variable
+  if not(defined(!!mtoviews)) then
+    !!mtoviews    = !this
+  endif
+  
+endmethod
+-- End of method definition for .globalInstance()
+
+------------------------------------------------------------------------
+--
+-- Method:      addMtoForm
+--
+-- Description: Add MTO form into the system
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+-- Return:
+--   [Data Type] [Description]
+--    -
+--
+------------------------------------------------------------------------
+
+-- Define method
+define method .addMtoForm()
+  
+  -- Get next design view
+  do !i from 1
+
+    -- Skip if form is already defined
+    skip if(defined(!!mtopreview$!<i>))
+
+    -- Load view create view and add to system
+    !form = !!mtopreview(!i)
+    BREAK
+  enddo
+  
+  !this.views.append(!form)
+  
+  -- Show the form
+  !formString = '!!' & !form.string()
+  show $!<formString>
+  
+  !this.activeview = !form
+  
+endmethod
+-- End of method definition for .addDesignForm() is FORM
+
+------------------------------------------------------------------------
+--
+-- Method:      close
+--
+-- Description: Close the passed view/form down
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      FORM        Form
+-- Return:
+--   [Data Type] [Description]
+--    REAL        Available number
+--
+------------------------------------------------------------------------
+
+define method .close(!form is FORM)
+  
+  -- Remove view and its form from the lists
+  !ind = !this.viewIndex(!form)
+  if !ind.unset().not() then
+    !this.views.remove(!ind)
+  endif
+  
+  if !this.activeview eq !form then
+    !this.activeview = object form()
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      closeAll
+--
+-- Description: Close ALL MTO forms
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+-- Return:
+--   [Data Type] [Description]
+--    -
+--
+------------------------------------------------------------------------
+
+-- Define method
+define method .closeAll()
+  
+  !this.activeView = object form()
+  
+  -- Kill forms
+  do !form value !this.views
+    !formString = |!!| + !form.name()
+    KILL $!formString
+  enddo
+  
+  !this.views.clear()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      showAll
+--
+-- Description: Show ALL MTO forms
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+-- Return:
+--   [Data Type] [Description]
+--    -
+--
+------------------------------------------------------------------------
+
+-- Define method
+define method .showAll()
+  
+  !this.activeView = object form()
+  
+  -- show forms
+  do !form value !this.views
+    !formString = |!!| + !form.name()
+    handle any
+    endhandle
+    SHOW $!formString
+    handle any
+    endhandle
+  enddo
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      viewIndex
+--
+-- Description: Window using the window store data
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      GADGET      View name
+-- Return:
+--   [Data Type] [Description]
+--    REAL        Index in the store of the passed view
+--
+------------------------------------------------------------------------
+
+define method .viewIndex(!view is FORM) is REAL
+  
+  -- Loop through list
+  do !i indices !this.views
+    if (!view eq !this.views[!i]) then
+      return !i
+    endif
+  enddo
+  return REAL()
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadmto
+--
+-- Description: create new form and load mtp given
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      DBREF       :MTOSUMM / :MTOPIPE
+-- Return:
+--   [Data Type] [Description]
+--    REAL        Index in the store of the passed view
+--
+------------------------------------------------------------------------
+
+define method .loadmto(!mto is DBREF)
+  
+  !this.loadmto(!mto,false)
+
+endmethod
+------------------------------------------------------------------------
+--
+-- Method:      loadmto
+--
+-- Description: create new form and load mtp given
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    1   R      DBREF       :MTOSUMM / :MTOPIPE
+-- Return:
+--   [Data Type] [Description]
+--    REAL        Index in the store of the passed view
+--
+------------------------------------------------------------------------
+
+define method .loadmto(!mto is DBREF, !unitStyle is BOOLEAN)
+  
+  do !i index !this.views
+    !form = !this.views[$!i]
+    handle any
+      SKIP
+    endhandle
+    if !form.mto eq !mto then
+      !formString = |!!| + !form.name()
+      handle any
+      endhandle
+      SHOW $!formString
+      handle any
+      endhandle
+      RETURN
+    endif
+  enddo
+  
+  !mtoline = !mto.member
+  
+  !mtomem = array()
+  do !i index !mtoline
+    !mem = array()
+    do !mtoele value !mtoline[$!i].member
+      !desi = !mtoele.:MTODESELE.dbref()
+      handle any
+        !desi = =0/0
+      endhandle
+      if !desi.badref().not() then
+        !mem.append(!mtoele.:MTODESELE)
+      endif
+    enddo
+    !mtomem[$!i] = !mem
+  enddo
+  
+  !this.addMtoForm()
+  !this.activeview
+  !this.activeview.mto = !mto
+  !this.activeview.mtolines = !mtoline
+  !this.activeview.mtoitems = !mtomem
+  
+  !this.activeview.control.loadMtoGrid(!unitStyle)
+  
+  !mtovers = !mto.owner
+  !mtorev = !mtovers.:MTO-REV
+  !mtover = !mtovers.:MTO-VERS
+--  !mtovers.:MTO-VERS-LATEST true
+--  !mtovers.:MTO-REV-LATEST false
+  !mtorel = !mtovers.:MTO-RELEASED
+  !mtouser = !mtovers.:MTO-CRE-USER
+  !mtodate = !mtovers.:MTO-CRE-DATE
+  
+  if !mtorel then
+    !this.activeview.mto1.val = 'RELEASED'
+  else
+    !this.activeview.mto1.val = 'Version '
+  endif
+  !version =  |Vers.:"| + !mtover.string() + |" - Rev.:"| + !mtorev + |"|
+  
+  !this.activeview.mto2.val = !version
+  
+  -- set description on form
+  if !mto.acttype eq |:MTOSUMM| then
+    if !mto.:MTO-SPREF.badref() then
+      !desc = !mtovers.owner.Description
+      !this.activeview.mto3.val = |Overall MTO: | + !desc
+    else
+      !this.activeview.mto3.val = |Pipe class MTO: | + !mto.:MTO-SPREF.namn
+    endif
+  elseif !mto.acttype eq |:MTOPIPE| then
+    !this.activeview.mto3.val = |Pipe MTO: | + !mto.:MTODESLNK.namn
+  endif
+  
+  !info = |Created: | + !mtodate + | // | + !mtouser
+  !this.activeview.mto4.val = !info
+  
+endmethod

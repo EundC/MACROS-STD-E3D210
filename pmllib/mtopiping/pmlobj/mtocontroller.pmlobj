@@ -1,0 +1,626 @@
+------------------------------------------------------------------------
+--
+-- (c) Copyright  2017 to Current Year  AVEVA GmbH
+--
+-- File:            mtocontroller.pmlobj
+--   Type:          Object Definition
+--   Group:         General Application
+--     Keyword:     GEN
+--   Module:        design
+--   Replaces:
+--
+-- Author:          Herbert Zöchling
+-- Created:         13.02.2017
+--
+-- Last modified by $Author: herbert.zoechling $ on $Date: 2017/02/13 10:52:52 $
+--                  $Revision: 1.00 $
+--
+-- Description:
+--   MTO controller
+--
+-- *** OLD STYLE PML ***
+-- *** COMMAND LINE SYNTAX ***
+--
+------------------------------------------------------------------------
+--
+
+define object mtocontroller
+  
+  -- Source data
+  member .mtovers       is DBREF
+  member .mtodef        is MTOSETTINGS
+  member .pipes         is ARRAY
+  
+  -- MTO DB handler
+  member .mtoconf       is MTOCONFIGURATION
+  member .mtostru       is MTOSTRUCTURE
+  
+  -- MTO DB extractor
+  member .mtoextract    is MTOEXTRACTOR
+  member .mtobuilder    is MTOBUILDER
+  
+endobject
+
+-- End of object definition for mtocontroller
+
+------------------------------------------------------------------------
+--
+-- Method:      mtocontroller
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .mtocontroller()
+  
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      setversion
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .setversion(!mtostru is mtostructure)
+  
+  !this.mtostru = !mtostru
+  !elem = !mtostru.newmtovers
+  
+  !this.pipes.clear()
+  
+  if !elem.badref() then
+    RETURN ERROR 1 'Element is BADREF'
+  endif
+  
+  if !elem.acttype neq |:MTOVERS| then
+    RETURN ERROR 1 'Element is not from type :MTOVERS'
+  endif
+  
+  if !elem.mcount neq 0 then
+    RETURN ERROR 1 'Element :MTOVERS already contains MTOs!!'
+  endif
+  
+  !this.mtovers = !elem
+  !mtogrp = !elem.owner
+  
+
+  !this.mtodef.mtosettings()
+  !this.mtodef.get(!this.mtovers)
+  
+
+  !srcHandler = object mtoSourceHandler()
+  !srcHandler.getMTOdefiniton(!mtogrp)
+  
+  !this.pipes = !srcHandler.getSourcePipesFromDB()
+
+  !valid = !srcHandler.same
+
+  if !this.pipes.empty() then
+    !!alert.error(|No PIPES for MTO definiton found!|)
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      getPipesOnly
+--
+-- Description: Constructor, using passed
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .getPipesOnly(!mtostru is mtostructure)
+  
+  !this.mtostru = !mtostru
+  !elem = !mtostru.MTOLASTVER
+  
+  !this.pipes.clear()
+  
+  !undo = false
+  if !elem.badref() then
+    MARKDB 'MTOVERS needed'
+    $!mtostru.mtogrp
+    NEW :MTOVERS
+    !elem = !!ce
+    ENDMARKDB
+    !undo = true
+    -- RETURN ERROR 1 'No MTO Version found, could not get Pipes!'
+  endif
+  
+  if !elem.acttype neq |:MTOVERS| then
+    if !undo then
+      UNDODB
+    endif
+    RETURN ERROR 1 'Element is not from type :MTOVERS'
+  endif
+  
+  !this.mtovers = !elem
+  !mtogrp = !elem.owner
+
+  !srcHandler = object mtoSourceHandler()
+  !srcHandler.getMTOdefiniton(!mtogrp)
+  
+  !this.pipes = !srcHandler.getSourcePipesFromDB()
+
+  !valid = !srcHandler.same
+  
+  if !undo then
+    UNDODB
+  endif
+
+  if !this.pipes.empty() then
+    RETURN ERROR 1 'No PIPES for MTO definiton found!'
+  endif
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      loadConfig
+--
+-- Description: Load MTO configuration
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .loadConfig(!mtogrp is DBREF)
+  
+  -- load MTO configuration (UID setup)
+  -- load MTO output setting (UDA mapping)
+  !this.mtoconf = object mtoconfiguration()
+  !this.mtoconf.loadconfig(!mtogrp)
+  handle 1
+    RETURN ERROR 1
+  elsehandle any
+    !!alert.error(|Could not load MTO configuration!|)
+    RETURN ERROR 1
+  endhandle
+  
+endmethod
+  
+------------------------------------------------------------------------
+--
+-- Method:      extractMTO
+--
+-- Description: get MTO data from DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .extractMTO()
+  
+  -- extract data to PML objects
+  !this.mtoextract = object mtoextractor()
+  
+  -- load MTO configuration
+  !this.mtoextract.mtoconfig = !this.mtoconf
+  !this.mtoextract.mtodef = !this.mtodef
+  !this.mtoextract.pipes = !this.pipes
+  
+  -- extract data from DB
+  !this.mtoextract.runextract()
+  
+  -- put data into MTO arrays
+  !this.mtobuilder = object mtobuilder()
+  !this.mtobuilder.runmtobuild(!this.mtoextract, !this.mtoconf, !this.mtodef)
+  
+endmethod
+  
+------------------------------------------------------------------------
+--
+-- Method:      writeMTOtoDB
+--
+-- Description: write MTO data to DB
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .writeMTOtoDB()
+  
+  -- write data to design DB
+  -- using !this.mtostru
+  
+  !sz = !this.mtobuilder.mtopipes.size() + !this.mtobuilder.mtospecs.size()
+  if !this.mtobuilder.mtosumm.empty().not() then
+    !sz = !sz + 1
+  endif
+
+  PROMPT |Step 4 / 5 - Create MTO in DB|
+  !!fmsys.setprogress(0)
+  
+  -- create piping mtos
+  do !i index !this.mtobuilder.mtopipes
+    !pipe = !this.mtobuilder.pipes[$!i]
+    !mto = !this.mtobuilder.mtopipes[$!i]
+    
+    !this.mtostru.newmto(|PIPE|, !pipe)
+    handle any
+      !mess = !!error.text
+      $P $!mess
+      skip
+    endhandle
+    !this.mtostru.newmtolines(!mto,!this.mtoconf)
+    
+    !pro = !i / !sz * 100
+    !!fmsys.setprogress(!pro)
+  enddo
+  
+  !j = !this.mtobuilder.mtopipes.size()
+  
+  -- create summary mtos
+  do !i index !this.mtobuilder.mtospecs
+    !spec = !this.mtobuilder.specs[$!i].dbref()
+    !mto = !this.mtobuilder.mtospecs[$!i]
+    
+    !this.mtostru.newmto(|SUMM|, !spec)
+    handle any
+      !mess = !!error.text
+      $P $!mess
+      skip
+    endhandle
+    !this.mtostru.newmtolines(!mto,!this.mtoconf)
+    
+    !j = !j + 1
+    !pro = !j / !sz * 100
+    !!fmsys.setprogress(!pro)
+    
+  enddo
+  
+  if !this.mtodef.summs then
+    -- create summary mto
+    !summ = =0/0
+    !mto = !this.mtobuilder.mtosumm
+    !this.mtostru.newmto(|SUMM|, !summ)
+    handle any
+      !mess = !!error.text
+      $P $!mess
+      skip
+    endhandle
+    !this.mtostru.newmtolines(!mto,!this.mtoconf)
+  endif
+  
+  PROMPT ||
+  !!fmsys.setprogress(100)
+
+  -- update MTOSOURCE used
+  !mtogrp = !this.mtovers.owner
+
+  !vers = !this.mtostru.newmtovers
+  if !vers.badref() then
+    !version = |- // -|
+  else
+    !r = !vers.:MTO-REV.trim()
+    handle any
+      !r = |-|
+    elsehandle none
+      if !r.trim() eq || then
+        !r = |-|
+      endif
+    endhandle
+    !v = !vers.:MTO-VERS.string('I2').trim()
+    handle any
+      !v = |00|
+    elsehandle none
+      if !v.trim() eq || then
+        !v = |00|
+      endif
+    endhandle
+    !version = !r + | // | + !v
+  endif
+
+  !srcHandler = object mtoSourceHandler()
+  !srcHandler.getMTOdefiniton(!mtogrp)
+  !srcHandler.updateVersionForSourceInDB(!version)
+  handle 1
+    !message = !!error.text
+    !!alert.message(!message)
+  endhandle
+  
+endmethod
+
+------------------------------------------------------------------------
+--
+-- Method:      compareMTO
+--
+-- Description: compare MTO data to older Revision
+--
+-- Method Type: Function/Procedure
+-- Arguments:
+--   [#] [R/RW] [Data Type] [Description]
+--    -
+-- Return:
+--   [Data Type] [Description]
+--
+------------------------------------------------------------------------
+
+define method .compareMTO()
+  
+  -- compare data with previous revision
+  
+  !cevers = !this.mtovers
+  !lastrev = !this.mtostru.mtolastrev 
+
+  -- new format unit setup:
+  if !!mtoFormatHandler.useALLflag then
+    !uformat = !!mtoFormatHandler.ALL
+  else
+    !uformat = !!mtoFormatHandler.LENGTH
+  endif
+
+  PROMPT |Step 5 / 5 - Compare with previous Revision|
+  !!fmsys.setprogress(0)  
+  
+  !newmtos = !cevers.member
+
+  !oldsumm = array()
+  !oldsummspec = array()
+  !oldpipe = array()
+  !oldpipelnk = array()
+  
+  !oldmtos = !lastrev.member
+  handle any
+  elsehandle none
+    !block = object BLOCK('!oldmtos[!evalIndex].acttype')
+    !oldtypes = !oldmtos.evaluate(!block)
+    
+    do !i index !oldmtos
+      if !oldtypes[$!i] eq |:MTOSUMM| then
+        !oldsumm.append(!oldmtos[$!i])
+        !oldsummspec.append(!oldmtos[$!i].:MTO-SPREF)
+      else
+        !oldpipe.append(!oldmtos[$!i])
+        !oldpipelnk.append(!oldmtos[$!i].:MTODESLNK)
+      endif
+    enddo
+  endhandle
+  
+  !sz = !newmtos.size()
+  
+  do !i index !newmtos
+    
+    !revflg = false
+    
+    !newm = !newmtos[$!i]
+    !type = !newm.acttype
+    if !type eq |:MTOPIPE| then
+      !pipe = !newm.:MTODESLNK
+      !ind = !oldpipelnk.find(!pipe)
+      if !ind.unset() then
+        !oldmto = =0/0
+      else
+        !oldmto = !oldpipe[$!ind[1]]
+      endif
+    else
+      !spec = !newm.:MTO-SPREF
+      !ind = !oldsummspec.find(!spec)
+      if !ind.unset() then
+        !oldmto = =0/0
+      else
+        !oldmto = !oldsumm[$!ind[1]]
+      endif
+    endif
+    
+    if !oldmto.badref() then
+      
+      do !j index !newm.member
+        !mtol = !newm.member[$!j]
+        !mtol.:MTO-QTY-OLD = 0
+        !mtol.:MTO-QTY-DIFF = !mtol.:MTO-QTY-NEW
+        !mtol.Ptnhead = !j
+      enddo
+      
+    else
+      
+      !oldlines = !oldmto.member
+
+      if !oldlines.empty() then
+        
+        do !j index !newm.member
+          !mtol = !newm.member[$!j]
+          !mtol.:MTO-QTY-OLD = 0
+          !mtol.:MTO-QTY-DIFF = !mtol.:MTO-QTY-NEW
+          !mtol.Ptnhead = !j
+        enddo
+        
+        $P $!oldmto - Positionnumbers not found!! OLD MTO is empty!!
+        
+      else
+        
+        !block = object BLOCK('!oldlines[!evalIndex].:MTO-UID')
+        !olduid = !oldlines.evaluate(!block)
+        !block = object BLOCK('!oldlines[!evalIndex].:MTO-QTY-NEW')
+        !oldqty = !oldlines.evaluate(!block)
+        !block = object BLOCK('!oldlines[!evalIndex].Ptnhead')
+        !oldpos = !oldlines.evaluate(!block)
+        
+        !lastpos = !oldpos
+        !lp = !lastpos.sortunique().last() + 1
+        
+        !newuid = array()
+        
+        do !j index !newm.member
+          
+          !mtol = !newm.member[$!j]
+          !uid = !mtol.:MTO-UID
+          !newuid.append(!uid)
+          !ind = !olduid.find(!uid)
+          
+          if !ind.unset() then
+            !mtol.:MTO-QTY-OLD = 0
+            !mtol.:MTO-QTY-DIFF = !mtol.:MTO-QTY-NEW
+            !mtol.Ptnhead = !lp
+            !lp = !lp + 1
+          else
+            !o = !ind[1]
+            !mtol.:MTO-QTY-OLD = !oldqty[$!o]
+            !diff = !mtol.:MTO-QTY-NEW - !oldqty[$!o]
+            !mtol.:MTO-QTY-DIFF = !diff
+            !mtol.Ptnhead = !oldpos[$!o]
+            
+            if !diff neq 0 then
+              $(  
+              if !type eq |:MTOPIPE| and !revflg eq false then
+                -- change PIPE revision
+                !revInd = !this.mtostru.getnextrev(!newm.:MTO-PIPE-REV)
+                !newm.:MTO-PIPE-REV = !revInd
+                !revflg = true
+              endif
+              if !type eq |:MTOPIPE| then
+                !mtol.:MTO-REV = !newm.:MTO-PIPE-REV
+              else
+                !mtol.:MTO-REV = !newm.owner.:MTO-REV
+              endif
+              $)  
+              if !revflg eq false then
+                -- change SUB MTO revision
+                !revInd = !this.mtostru.getnextrev(!newm.:MTO-PIPE-REV)
+                !newm.:MTO-PIPE-REV = !revInd
+                !revflg = true
+              endif
+              !mtol.:MTO-REV = !newm.:MTO-PIPE-REV
+              
+            endif
+          endif
+          
+        enddo
+
+        -- compare OLD MTO to NEW?? Get deleted Elements? With QTY 0!
+        
+        do !j index !oldlines
+          
+          !uid = !olduid[$!j]
+          !ind = !newuid.find(!uid)
+          if !ind.empty() then
+            -- mto line, has been deleted!
+            !oldmtoline = !oldlines[$!j]
+            !qtynew = !oldmtoline.:MTO-QTY-NEW
+            !qtydiff = !oldmtoline.:MTO-QTY-DIFF
+            !qtyold = !oldmtoline.:MTO-QTY-OLD
+            
+            -- $P NEW: $!qtynew DIFF: $!qtydiff OLD: $!qtyold
+            -- q var !this.mtodef.keepDel
+            
+            !copylineflag = false
+            
+            if !qtynew eq 0 then
+              -- keep deleted mtoline?
+              if !this.mtodef.keepDel then
+                !copylineflag = true
+              endif
+            else
+              -- copy old mtoline, set newqty to 0
+              !copylineflag = true
+            endif
+            
+            if !copylineflag then
+              
+              $!newm
+              LAST MEM
+              handle(2,113)
+                -- MTO has no valid member any more?
+              endhandle
+              NEW :MTOLINE copy $!oldmtoline
+              !mtol = !!ce
+              
+              if !qtynew neq 0 then
+                if !revflg eq false then
+                  -- change SUB MTO revision
+                  !revInd = !this.mtostru.getnextrev(!newm.:MTO-PIPE-REV)
+                  !newm.:MTO-PIPE-REV = !revInd
+                  !revflg = true
+                endif
+                
+                !mtol.:MTO-REV = !newm.:MTO-PIPE-REV
+                !mtol.:MTO-QTY-NEW = 0
+                !diff = !qtynew * -1
+                
+                !mtol.:MTO-QTY-DIFF = !diff
+                !mtol.:MTO-QTY-OLD = !qtynew
+              endif
+              
+            endif
+            
+          endif
+          
+        enddo
+        
+      endif
+      
+    endif
+
+    -- update Quantity with unit UDAs
+    do !j index !newm.member
+      !mtol = !newm.member[$!j]
+      !gtype = !mtol.:MTO-GTYPE
+
+      !old = !mtol.:MTO-QTY-OLD
+      !diff = !mtol.:MTO-QTY-DIFF
+      !new = !mtol.:MTO-QTY-NEW
+      
+      if !gtype eq |TUBE| then
+        !oldUnit = !old.string(!uformat)
+        !diffUnit = !diff.string(!uformat)
+        !newUnit = !new.string(!uformat)
+      else
+        !oldUnit = !old.string(|D0|) + !!mtoFormatHandler.pcsLabel
+        !diffUnit = !diff.string(|D0|) + !!mtoFormatHandler.pcsLabel
+        !newUnit = !new.string(|D0|) + !!mtoFormatHandler.pcsLabel
+      endif
+
+      !mtol.:MTO-QTY-OLD-UNIT = !oldUnit
+      !mtol.:MTO-QTY-DIFF-UNIT = !diffUnit
+      !mtol.:MTO-QTY-NEW-UNIT = !newUnit
+    enddo
+
+    !pro = !i / !sz * 100
+    !!fmsys.setprogress(!pro)
+    
+  enddo
+  
+  
+  !!fmsys.setprogress(0)
+  PROMPT ''
+  
+endmethod
