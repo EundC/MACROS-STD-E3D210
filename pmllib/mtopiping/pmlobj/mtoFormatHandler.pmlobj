@@ -114,6 +114,14 @@ define method .loadFromFile(!fileName is STRING)
     !file = object file(!fullFilePathName)
     handle any
     endhandle
+    -- create INI Folder:
+    !fullFilePathName = |%| + !proj + |DFLTS%\|
+    !folder = object file(!fullFilePathName)
+    handle any
+    elsehandle none
+      !cmd = |mkdir | + !folder.fullname() + |\ini|
+      SYSCOM '$!cmd'
+    endhandle
   endif
 
   -- find zeppelin defaults?
@@ -122,17 +130,25 @@ define method .loadFromFile(!fileName is STRING)
     $P Try to load default file: %PMLLIB%\mtopiping\ini\mto-default-units.ini
 
     !fullFilePathName = |%PMLLIB%\mtopiping\ini\mto-default-units.ini|
-    !file = object file(!fullFilePathName)
+    !filePML = object file(!fullFilePathName)
     handle any
+    elsehandle none
+      -- copy file
+      !fullFilePathName = |%| + !proj + |DFLTS%\ini\mto-default-units.ini|
+      !file = object file(!fullFilePathName)
+      !filePML.copy(!file)
     endhandle
 
     if !file.exists().not() then
-      $P FAILED - Try to load default file: %PMLLIB%\mtopiping\ini\mto-default-units.ini
+      $P FAILED - Try to copy default file: %PMLLIB%\mtopiping\ini\mto-default-units.ini
     endif
   endif
 
+  -- q var !file
+
   if !file.exists() then
     !this.file = !file
+    -- q var !this.file
     !this.loadFromFile()
   else
     return error 1 'Could not load data from file!'
@@ -260,7 +276,7 @@ define method .saveToFile()
       enddo
     endif
   enddo
-  
+
   !this.file.writefile(|OVER|,!data)
   handle any
     !error = !!error
