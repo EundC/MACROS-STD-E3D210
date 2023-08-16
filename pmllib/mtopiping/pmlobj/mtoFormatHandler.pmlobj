@@ -127,20 +127,20 @@ define method .loadFromFile(!fileName is STRING)
   -- find zeppelin defaults?
   if !file.exists().not() then
     $P File: $!fileName not found in Projekt...
-    $P Try to load default file: %PMLLIB%\mtopiping\ini\mto-default-units.ini
+    $P Try to load default file: %PMLLIB%\mtopiping\ini\MTO-unit-Settings.unit
 
-    !fullFilePathName = |%PMLLIB%\mtopiping\ini\mto-default-units.ini|
+    !fullFilePathName = |%PMLLIB%\mtopiping\ini\MTO-unit-Settings.unit|
     !filePML = object file(!fullFilePathName)
     handle any
     elsehandle none
       -- copy file
-      !fullFilePathName = |%| + !proj + |DFLTS%\ini\mto-default-units.ini|
+      !fullFilePathName = |%| + !proj + |DFLTS%\ini\MTO-unit-Settings.unit|
       !file = object file(!fullFilePathName)
       !filePML.copy(!file)
     endhandle
 
     if !file.exists().not() then
-      $P FAILED - Try to copy default file: %PMLLIB%\mtopiping\ini\mto-default-units.ini
+      $P FAILED - Try to copy default file: %PMLLIB%\mtopiping\ini\MTO-unit-Settings.unit
     endif
   endif
 

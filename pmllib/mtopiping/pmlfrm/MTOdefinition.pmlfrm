@@ -1037,7 +1037,8 @@ define method .loaddata()
       !this.unitFile('load')
     endif
   else
-    !!mtoFormatHandler.loadFromFile(|mto-default-units.ini|)
+    !!mtoFormatHandler.loadFromFile(|MTO-unit-Settings.unit|)
+    !this.oformatsettingsfile.dtext = !!mtoFormatHandler.getSettingFiles()
   endif
 
   !this.pcsLabel.val = !!mtoFormatHandler.pcsLabel
