@@ -965,6 +965,9 @@ define method .loaddata()
     !this.oOptionfile.val = !ind[1]
   else
     !this.oOptionfile.val = 1
+    handle any
+      $P No Optionfile found to select.
+    endhandle
   endif
 
   -- load config
@@ -2093,23 +2096,28 @@ define method .getOptionFiles()
   !dflts = |%PMLUI%\DFLTS\std\|
   !fold = object file(!dflts)
   !files = !fold.files()
-  !fullfold = !fold.fullname()
+  handle any
+    -- no files found
+    $P no Optionfiles found for "PMLUI\DFLTS\std"
+  elsehandle none
+    !fullfold = !fold.fullname()
 
-  !dtext.append(|--- Default Files: ---|)
-  !rtext.append(|COMMENT|)
+    !dtext.append(|--- Default Files: ---|)
+    !rtext.append(|COMMENT|)
 
-  do !file value !files
-    !fullname = !file.fullname()
-    !f = !fullname.replace(!fullfold,||).substring(2)
-    !dtext.append(!f)
-    !ff = !dflts + !f
-    !rtext.append(!ff)
-  enddo
+    do !file value !files
+      !fullname = !file.fullname()
+      !f = !fullname.replace(!fullfold,||).substring(2)
+      !dtext.append(!f)
+      !ff = !dflts + !f
+      !rtext.append(!ff)
+    enddo
 
-  !dtext.insert(1,||)
-  !rtext.insert(1,|COMMENT|)
-  
+    !dtext.insert(1,||)
+    !rtext.insert(1,|COMMENT|)
+  endhandle  
+
   !this.oOptionfile.dtext = !dtext
   !this.oOptionfile.rtext = !rtext
-  
+
 endmethod

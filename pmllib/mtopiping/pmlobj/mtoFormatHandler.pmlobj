@@ -293,6 +293,10 @@ define method .getSettingFiles() is ARRAY
   !fullFilePathName = |%| + !proj + |DFLTS%\ini\|
   !folder = object file(!fullFilePathName)
   !path = !folder.fullname()
+  handle any
+    $P No unit settingsfile found for project!
+    return !fileList
+  endhandle
 
   do !file value !folder.files()
     !fullname = !file.fullname()
