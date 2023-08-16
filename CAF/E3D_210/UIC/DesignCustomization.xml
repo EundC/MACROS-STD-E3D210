@@ -3,7 +3,6 @@
   <DefaultIcon>AvevaSharedIcons:ID_WARNING</DefaultIcon>
   <UICustomizationFiles>
  <!--  E&C Anpassungen   -->
-	<CustomizationFile Name="ZeppelinBonus" Path="ZeppelinDesign.uic" />
 	<CustomizationFile Name="EUCmtoUIC" Path="EUCmtoUIC.uic" />
   </UICustomizationFiles>
 </UICustomizationSet>

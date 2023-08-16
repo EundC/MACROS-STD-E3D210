@@ -1,7 +1,69 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <UserInterfaceCustomization xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="www.aveva.com">
   <Version>1.0</Version>
-  <Tools />
+  <FormsMetaData />
+  <Tools>
+    <ButtonTool Name="EundCmtoBonus.Button3">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!mtomanager</Macro>
+        <Key>Macro:a9efc510-84a1-457a-8399-c398cace37d2</Key>
+        <Arguments />
+      </Command>
+      <Image>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAABtSURBVDhPzY0BCoAwDAP9/6NXzeBGVjpliKBwXQjteUTEK8pSXJ/GLX3PjxwttNaWfCOgJLOYmQSUjgtWjD0NoCRXh1AKHAR6M1uCFaWAklwdwhAoZFzgPUwCDaAk+x8zpcD5h+CJvudH+8RxAgA3s5n26/g9AAAAAElFTkSuQmCC</Image>
+      <Caption>MTO Manager</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="EUCmtoUIC.Button4">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>show !!MTOconfigurator</Macro>
+        <Key>Macro:812cc9f3-dd94-413f-8470-5b68dc2d7a53</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_CUSTOMISE</ImageResourceId>
+      <Caption>MTO Config</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="EUCmtoUIC.Button5">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>!!mtonewmtoworld()</Macro>
+        <Key>Macro:e0a404cf-b7a3-4bd1-9953-9be99d62e8d9</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>StandardIcons:ID_WEB</ImageResourceId>
+      <Caption>New :MTOWLD</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="EUCmtoUIC.Button6">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>!!mtocloseallpreviews()</Macro>
+        <Key>Macro:b3d58eed-e319-45bb-8ccb-44c8a0cc3fdf</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_DELETE</ImageResourceId>
+      <Caption>Close Previews</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+    <ButtonTool Name="EUCmtoUIC.Button7">
+      <Command>
+        <Type>Macro</Type>
+        <Macro>!!mtomodifyworld()</Macro>
+        <Key>Macro:b98feb68-7c18-4075-9e6a-38b0e7632d86</Key>
+        <Arguments />
+      </Command>
+      <ImageResourceId>AvevaSharedIcons:ID_RENAME_ALL</ImageResourceId>
+      <Caption>Mod :MTOWLD</Caption>
+      <HelpContext />
+      <DisplayStyle>Default</DisplayStyle>
+    </ButtonTool>
+  </Tools>
   <InstanceTools />
   <MenuBar />
   <CommandBars />
@@ -14,7 +76,27 @@
   <QATTools />
   <ContextualTabGroups />
   <TabToolbarTools />
-  <Tabs />
+  <Tabs>
+    <Tab Name="EundCmtoBonus">
+      <Caption>EundC-Tools</Caption>
+      <ContextualTabGroup>
+        <Item>None</Item>
+      </ContextualTabGroup>
+      <Groups>
+        <Group Name="EundCmtoBonus.Group1">
+          <Tools>
+            <Tool Name="EundCmtoBonus.Button3" IsFirstInGroup="False" LargeImage="True" />
+            <Tool Name="EUCmtoUIC.Button4" LargeImage="True" />
+            <Tool Name="EUCmtoUIC.Button5" />
+            <Tool Name="EUCmtoUIC.Button7" />
+            <Tool Name="EUCmtoUIC.Button6" />
+          </Tools>
+          <Caption>MTO</Caption>
+        </Group>
+      </Groups>
+    </Tab>
+  </Tabs>
   <MiniToolbarTools />
+  <BackstageCaption />
   <Namespace>EUCmtoUIC</Namespace>
 </UserInterfaceCustomization>

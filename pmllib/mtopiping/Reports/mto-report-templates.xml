@@ -1,7 +1,7 @@
 <REPORT>
-  <NAME>MTO-Zeppelin</NAME>
-  <PIPE>%PMLLIB%\mtopiping\Reports\MTO-Zeppelin-Dflt-Pipe.repv</PIPE>
-  <SUMM>%PMLLIB%\mtopiping\Reports\MTO-Zeppelin-Dflt-Summ.repv</SUMM>
-  <SAPPIPE>%PMLLIB%\mtopiping\Reports\SAP-MTO-Zeppelin-Pipe.repv</SAPPIPE>
-  <SAPSUMM>%PMLLIB%\mtopiping\Reports\SAP-MTO-Zeppelin-Summ.repv</SAPSUMM>
+  <NAME>EundC-MTO-AVEVA</NAME>
+  <PIPE>%PMLLIB%\mtopiping\Reports\MTO-Aveva-001-Pipe.repv</PIPE>
+  <SUMM>%PMLLIB%\mtopiping\Reports\MTO-Aveva-001-Summ.repv</SUMM>
+  <SAPPIPE>%PMLLIB%\mtopiping\Reports\SAP-MTO-Aveva-001-Pipe</SAPPIPE>
+  <SAPSUMM>%PMLLIB%\mtopiping\Reports\SAP-MTO-Aveva-001-Summ.repv</SAPSUMM>
 </REPORT>
